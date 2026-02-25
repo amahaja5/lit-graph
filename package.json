@@ -1,0 +1,15 @@
+{
+  "name": "lit-graph",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive literature snowballing explorer (Semantic Scholar Graph API)",
+  "scripts": {
+    "dev": "node server/src/index.js",
+    "server": "node server/src/index.js",
+    "test": "node --test tests/frontend/*.test.js tests/server/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

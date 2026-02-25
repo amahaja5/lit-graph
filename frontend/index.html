@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitGraph MVP</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>LitGraph</h1>
+          <p class="tagline">Interactive literature snowballing explorer (MVP)</p>
+        </div>
+        <form id="search-form" class="search-form" novalidate>
+          <label for="paper-id-input" class="sr-only">Semantic Scholar ID / DOI / arXiv ID</label>
+          <input
+            id="paper-id-input"
+            name="paperId"
+            type="text"
+            placeholder="DOI:10.18653/v1/N18-3011 or ARXIV:2106.15928"
+            autocomplete="off"
+          />
+          <button id="search-submit" type="submit">Load Seed</button>
+        </form>
+      </header>
+
+      <div id="global-status" class="global-status" aria-live="polite"></div>
+      <div id="global-error" class="global-error" aria-live="assertive"></div>
+      <div id="global-notices" class="global-notices" aria-live="polite"></div>
+
+      <main class="layout">
+        <section class="graph-panel" aria-label="Graph canvas">
+          <div class="graph-toolbar">
+            <div class="graph-toolbar-actions">
+              <button id="reset-view-btn" type="button">Reset View</button>
+              <button id="layout-mode-btn" type="button" class="secondary" aria-pressed="true">Year Layout: On</button>
+            </div>
+            <div class="graph-toolbar-meta">
+              <span id="layout-hint" class="toolbar-hint">Older ← Year → Newer</span>
+              <span id="graph-summary">No graph loaded</span>
+            </div>
+          </div>
+          <svg id="graph-svg" class="graph-svg" role="img" aria-label="Literature graph visualization"></svg>
+          <div id="graph-empty" class="graph-empty">
+            Enter a Semantic Scholar paper identifier to begin exploring.
+          </div>
+        </section>
+
+        <aside class="side-panel" aria-label="Paper details and review cart">
+          <section class="panel-card">
+            <h2>Paper Details</h2>
+            <div id="sidecar-empty" class="muted">Select a node to view metadata.</div>
+            <div id="sidecar-content" class="sidecar-content" hidden>
+              <h3 id="sidecar-title">Untitled</h3>
+              <div id="sidecar-meta" class="meta-grid"></div>
+              <p id="sidecar-authors" class="authors"></p>
+              <p id="sidecar-abstract" class="abstract"></p>
+              <div class="sidecar-actions">
+                <button id="sidecar-expand-btn" type="button">Expand Node</button>
+                <button id="sidecar-review-btn" type="button">Add to Review</button>
+                <a id="sidecar-source-link" href="#" target="_blank" rel="noopener noreferrer">Open Source</a>
+              </div>
+              <div id="sidecar-state" class="muted"></div>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header-row">
+              <h2>Review Cart</h2>
+              <span id="review-count" class="badge">0</span>
+            </div>
+            <p class="muted">Selected papers will be exported as JSON.</p>
+            <ul id="review-list" class="review-list"></ul>
+            <div class="review-actions">
+              <button id="export-json-btn" type="button" disabled>Export JSON</button>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
