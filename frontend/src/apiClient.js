@@ -10,6 +10,13 @@ export const SEED_FIELDS = [
   "venue",
 ].join(",");
 
+export const BIBTEX_FIELDS = [
+  "title",
+  "authors",
+  "year",
+  "citationStyles",
+].join(",");
+
 export const CITATION_FIELDS = [
   "isInfluential",
   "contexts",
@@ -57,6 +64,12 @@ export function createApiClient({ baseUrl = "" } = {}) {
     async fetchPaper(paperId) {
       return requestJson(buildUrl(`${baseUrl}/api/paper/${encodePathParam(paperId)}`, {
         fields: SEED_FIELDS,
+      }));
+    },
+
+    async fetchPaperBibtex(paperId) {
+      return requestJson(buildUrl(`${baseUrl}/api/paper/${encodePathParam(paperId)}`, {
+        fields: BIBTEX_FIELDS,
       }));
     },
 

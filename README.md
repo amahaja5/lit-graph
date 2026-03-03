@@ -32,13 +32,13 @@ The graph is filtered and ranked client-side to keep the visualization readable.
 - D3 force graph rendering with node state colors (`unexplored`, `loading`, `expanded`, `error`)
 - Metadata side panel (title, authors, abstract, venue, citation metrics)
 - Review cart (select papers for export)
-- JSON export (`schemaVersion: 1`)
+- BibTeX export (`citationStyles`) with fallback entries and sort by author/year
 - Lightweight backend proxy for Semantic Scholar API requests (allowlisted routes + query params)
 - In-memory cache and basic retry/error normalization in the proxy
 
 ### Explicitly Excluded (MVP)
 
-- BibTeX export (`citationStyles`) 
+- JSON export
 - Search/autocomplete/title-match UI
 - Multi-hop automatic traversal
 - Persistence/accounts/saved sessions
@@ -47,7 +47,7 @@ The graph is filtered and ranked client-side to keep the visualization readable.
 
 ## Phase 2 / Future Enhancements
 
-- BibTeX export via `citationStyles`
+- Citation style variants and richer BibTeX customization
 - Search/autocomplete/title-match flows (`/paper/search`, `/paper/autocomplete`, etc.)
 - Saved sessions / graph persistence
 - Pagination controls for large expansions (follow `next` beyond first page)
@@ -187,24 +187,19 @@ The D3 graph is a visual projection of `GraphStore` state.
 
 1. User enters a paper identifier and clicks **Load Seed**.
 2. The app fetches the seed paper and renders the root node.
-3. Clicking an unexplored node selects it and triggers parallel fetches for citations/references.
-4. The side panel shows metadata for the selected paper.
+3. Clicking a node selects it and loads details (including abstract when available).
+4. **Expand Node** (manual) triggers parallel fetches for citations/references.
 5. **Add to Review** toggles the paper in the review cart.
-6. **Export JSON** downloads selected papers and related links.
+6. **Export BibTeX** downloads selected papers as a `.bib` file.
 
-### MVP Export: JSON
+### MVP Export: BibTeX
 
-The JSON export is versioned (`schemaVersion: 1`) and includes:
+BibTeX export uses Semantic Scholar `citationStyles.bibtex` entries and supports review-cart ordering by:
 
-- `seedPaperId`
-- `selectedPaperIds`
-- selected paper metadata
-- links touching selected papers
-- `exportedAt`
+- first author (`Author` option)
+- publication year (`Year` option)
 
-### Phase 2 Export: BibTeX via `citationStyles`
-
-BibTeX export is intentionally deferred. The Swagger spec exposes `citationStyles`, but the MVP does not fetch or transform it yet.
+When `citationStyles.bibtex` is unavailable for a paper, the app generates a fallback `@misc` entry using available metadata.
 
 ### Error / Empty State UX (Implemented)
 
@@ -222,6 +217,7 @@ frontend/
   src/
     main.js
     apiClient.js
+    bibtex.js
     normalize.js
     rank.js
     graphStore.js
@@ -239,6 +235,7 @@ server/
     errors.js
 tests/
   frontend/
+    bibtex.test.js
     normalize.test.js
     rank.test.js
     graphStore.test.js
@@ -263,6 +260,7 @@ cp .env.example .env
 ```
 
 Set `S2_API_KEY` in `.env` (or export it in your shell) if your Semantic Scholar usage requires a key.
+Set `S2_MIN_INTERVAL_MS` to match your approved Semantic Scholar rate limit (the default in this repo is `1100ms`, which stays under `1 req/sec`).
 
 ### Run the App
 

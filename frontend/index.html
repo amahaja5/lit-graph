@@ -19,7 +19,7 @@
             id="paper-id-input"
             name="paperId"
             type="text"
-            placeholder="DOI:10.18653/v1/N18-3011 or ARXIV:2106.15928"
+            placeholder="DOI:..., ARXIV:..., NBER:w12345"
             autocomplete="off"
           />
           <button id="search-submit" type="submit">Load Seed</button>
@@ -36,6 +36,13 @@
             <div class="graph-toolbar-actions">
               <button id="reset-view-btn" type="button">Reset View</button>
               <button id="layout-mode-btn" type="button" class="secondary" aria-pressed="true">Year Layout: On</button>
+              <label class="toolbar-control" for="expansion-mode-select">
+                Expansion
+                <select id="expansion-mode-select" class="toolbar-select">
+                  <option value="relevance">Top relevance</option>
+                  <option value="lesser_known_sample">Lesser-known sample</option>
+                </select>
+              </label>
             </div>
             <div class="graph-toolbar-meta">
               <span id="layout-hint" class="toolbar-hint">Older ← Year → Newer</span>
@@ -71,10 +78,17 @@
               <h2>Review Cart</h2>
               <span id="review-count" class="badge">0</span>
             </div>
-            <p class="muted">Selected papers will be exported as JSON.</p>
+            <p class="muted">Export selected papers as BibTeX only.</p>
             <ul id="review-list" class="review-list"></ul>
             <div class="review-actions">
-              <button id="export-json-btn" type="button" disabled>Export JSON</button>
+              <label class="review-sort-control" for="export-bibtex-sort">
+                Sort
+                <select id="export-bibtex-sort" class="toolbar-select" disabled>
+                  <option value="author">Author</option>
+                  <option value="year">Year</option>
+                </select>
+              </label>
+              <button id="export-bibtex-btn" type="button" disabled>Export BibTeX</button>
             </div>
           </section>
         </aside>

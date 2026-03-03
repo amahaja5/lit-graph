@@ -1,7 +1,18 @@
 import { createApiClient } from "./apiClient.js";
+import {
+  buildBibtexDocument,
+  extractOrBuildBibtexEntry,
+  getBibtexSortLabel,
+  normalizeBibtexSort,
+  sortReviewNodesForBibtex,
+} from "./bibtex.js";
 import { GraphStore } from "./graphStore.js";
 import { normalizeCitationBatch, normalizeReferenceBatch, toPaperNode } from "./normalize.js";
-import { selectTopCandidates } from "./rank.js";
+import {
+  EXPANSION_MODE_RELEVANCE,
+  getExpansionModeLabel,
+  selectCandidatesForMode,
+} from "./rank.js";
 import { createGraphRenderer } from "./graphRenderer.js";
 import { createSearchBar } from "./ui/searchBar.js";
 import { createSidecar } from "./ui/sidecar.js";
@@ -22,6 +33,7 @@ const elements = {
   graphSummary: document.querySelector("#graph-summary"),
   resetViewBtn: document.querySelector("#reset-view-btn"),
   layoutModeBtn: document.querySelector("#layout-mode-btn"),
+  expansionModeSelect: document.querySelector("#expansion-mode-select"),
   layoutHint: document.querySelector("#layout-hint"),
   sidecarEmpty: document.querySelector("#sidecar-empty"),
   sidecarContent: document.querySelector("#sidecar-content"),
@@ -35,7 +47,8 @@ const elements = {
   sidecarState: document.querySelector("#sidecar-state"),
   reviewCount: document.querySelector("#review-count"),
   reviewList: document.querySelector("#review-list"),
-  exportJsonBtn: document.querySelector("#export-json-btn"),
+  exportSortSelect: document.querySelector("#export-bibtex-sort"),
+  exportBibtexBtn: document.querySelector("#export-bibtex-btn"),
 };
 
 const store = new GraphStore();
@@ -73,8 +86,9 @@ const sidecar = createSidecar({
 const reviewCart = createReviewCart({
   countEl: elements.reviewCount,
   listEl: elements.reviewList,
-  exportBtnEl: elements.exportJsonBtn,
-  onExport: exportReviewCartJson,
+  exportBtnEl: elements.exportBibtexBtn,
+  exportSortEl: elements.exportSortSelect,
+  onExport: exportReviewCartBibtex,
   onSelectNode: selectNode,
 });
 
@@ -84,6 +98,7 @@ const completedNodeDetailFetches = new Set();
 
 elements.resetViewBtn.addEventListener("click", () => renderer.resetView());
 elements.layoutModeBtn.addEventListener("click", toggleLayoutMode);
+elements.expansionModeSelect.addEventListener("change", handleExpansionModeChange);
 window.addEventListener("resize", () => renderApp());
 
 renderApp();
@@ -208,6 +223,7 @@ async function expandNode(nodeId) {
   renderApp();
 
   try {
+    const expansionMode = getSelectedExpansionMode();
     const { citations, references } = await api.fetchExpansion(nodeId, {
       limit: EXPANSION_LIMIT,
       offset: 0,
@@ -216,8 +232,12 @@ async function expandNode(nodeId) {
     const citationBatch = normalizeCitationBatch(nodeId, citations);
     const referenceBatch = normalizeReferenceBatch(nodeId, references);
 
-    const topCitations = selectTopCandidates(citationBatch.candidates, TOP_N_PER_SIDE);
-    const topReferences = selectTopCandidates(referenceBatch.candidates, TOP_N_PER_SIDE);
+    const topCitations = selectCandidatesForMode(citationBatch.candidates, TOP_N_PER_SIDE, {
+      mode: expansionMode,
+    });
+    const topReferences = selectCandidatesForMode(referenceBatch.candidates, TOP_N_PER_SIDE, {
+      mode: expansionMode,
+    });
     const mergedCandidates = [...topCitations, ...topReferences];
 
     store.mergeExpansion(nodeId, mergedCandidates);
@@ -230,7 +250,7 @@ async function expandNode(nodeId) {
       setStatus("Expansion completed, but no eligible citation/reference nodes were returned for rendering.");
     } else {
       setStatus(
-        `Expansion complete: added up to ${topCitations.length} citation nodes and ${topReferences.length} reference nodes.`,
+        `${getExpansionModeLabel(expansionMode)} expansion complete: added up to ${topCitations.length} citation nodes and ${topReferences.length} reference nodes.`,
       );
     }
   } catch (error) {
@@ -252,19 +272,41 @@ function toggleReviewSelection(nodeId) {
   renderApp();
 }
 
-function exportReviewCartJson() {
+async function exportReviewCartBibtex({ sortBy = "author" } = {}) {
   const reviewNodes = store.getReviewCartNodes();
   if (!reviewNodes.length) {
     setError("Add at least one paper to the review cart before exporting.");
     return;
   }
 
-  const payload = store.toReviewExport();
-  const seedFragment = safeFileFragment(store.seedPaperId || "litgraph");
-  const fileName = `litgraph-review-${seedFragment}.json`;
-  downloadJson(payload, fileName);
-  setStatus(`Exported ${reviewNodes.length} paper(s) to ${fileName}`);
+  const sortMode = normalizeBibtexSort(sortBy);
+  const sortedNodes = sortReviewNodesForBibtex(reviewNodes, sortMode);
+  setStatus(`Preparing BibTeX export (${getBibtexSortLabel(sortMode)} order)...`);
   clearError();
+
+  const entries = [];
+  let fallbackCount = 0;
+
+  for (const node of sortedNodes) {
+    try {
+      const paper = await api.fetchPaperBibtex(node.paperId);
+      const entry = extractOrBuildBibtexEntry(paper, node);
+      if (!paper?.citationStyles?.bibtex) {
+        fallbackCount += 1;
+      }
+      entries.push(entry);
+    } catch {
+      fallbackCount += 1;
+      entries.push(extractOrBuildBibtexEntry(null, node));
+    }
+  }
+
+  const payload = buildBibtexDocument(entries);
+  const seedFragment = safeFileFragment(store.seedPaperId || "litgraph");
+  const fileName = `litgraph-review-${seedFragment}-${getBibtexSortLabel(sortMode)}.bib`;
+  downloadText(payload, fileName, "application/x-bibtex;charset=utf-8");
+  const fallbackSuffix = fallbackCount > 0 ? ` (${fallbackCount} fallback entr${fallbackCount === 1 ? "y" : "ies"})` : "";
+  setStatus(`Exported ${reviewNodes.length} paper(s) to ${fileName}${fallbackSuffix}`);
 }
 
 function renderApp() {
@@ -300,6 +342,12 @@ function toggleLayoutMode() {
   renderApp();
 }
 
+function handleExpansionModeChange() {
+  const mode = getSelectedExpansionMode();
+  setStatus(`${getExpansionModeLabel(mode)} mode selected. Future expansions will use this strategy.`);
+  clearError();
+}
+
 function updateLayoutControls(nodes) {
   const mode = renderer.getLayoutMode();
   const metadata = renderer.getLayoutMetadata();
@@ -322,6 +370,11 @@ function updateLayoutControls(nodes) {
   } else {
     elements.layoutHint.textContent = "Free force layout";
   }
+}
+
+function getSelectedExpansionMode() {
+  const raw = elements.expansionModeSelect?.value;
+  return raw || EXPANSION_MODE_RELEVANCE;
 }
 
 function renderNotices(notices) {
@@ -355,8 +408,8 @@ function formatErrorMessage(error) {
   return base;
 }
 
-function downloadJson(data, fileName) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+function downloadText(text, fileName, contentType = "text/plain;charset=utf-8") {
+  const blob = new Blob([String(text || "")], { type: contentType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

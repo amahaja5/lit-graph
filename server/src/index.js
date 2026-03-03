@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { TTLCache } from "./cache.js";
 import { createS2ProxyClient } from "./s2ProxyClient.js";
 import { ProxyHttpError, badRequest, sendError } from "./errors.js";
+import { createPaperIdResolver } from "./paperIdResolver.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,8 +19,9 @@ const PAPER_QUERY_ALLOWLIST = new Set(["fields"]);
 const CITATIONS_QUERY_ALLOWLIST = new Set(["fields", "limit", "offset", "publicationDateOrYear"]);
 const REFERENCES_QUERY_ALLOWLIST = new Set(["fields", "limit", "offset"]);
 
-export function createApp({ s2Client, serveFrontend = true, frontendDir = DEFAULT_FRONTEND_DIR, logger = console } = {}) {
+export function createApp({ s2Client, paperIdResolver, serveFrontend = true, frontendDir = DEFAULT_FRONTEND_DIR, logger = console } = {}) {
   const client = s2Client || createDefaultS2Client({ logger });
+  const resolver = paperIdResolver || createPaperIdResolver({ s2Client: client, logger });
   const app = express();
 
   app.get("/healthz", (_req, res) => {
@@ -54,7 +56,8 @@ export function createApp({ s2Client, serveFrontend = true, frontendDir = DEFAUL
 
   app.get("/api/paper/:paperId(*)", async (req, res) => {
     try {
-      const paperId = requirePaperId(req.params.paperId);
+      const rawPaperId = requirePaperId(req.params.paperId);
+      const paperId = await resolver.resolveSeedPaperId(rawPaperId);
       const query = sanitizeQuery(req.query, PAPER_QUERY_ALLOWLIST);
       const data = await client.getPaper(paperId, query);
       res.json(data);
@@ -85,6 +88,7 @@ export function createDefaultS2Client({ logger = console } = {}) {
     baseUrl: process.env.S2_API_BASE_URL || "https://api.semanticscholar.org/graph/v1",
     apiKey: process.env.S2_API_KEY,
     cache: new TTLCache({ ttlMs: 10 * 60 * 1000 }),
+    minIntervalMs: readNonNegativeIntEnv("S2_MIN_INTERVAL_MS", 1100),
     logger,
   });
 }
@@ -152,7 +156,7 @@ function loadEnvFile(filePath) {
     const key = line.slice(0, separatorIndex).trim();
     const value = line.slice(separatorIndex + 1).trim();
     if (!key || process.env[key] !== undefined) continue;
-    process.env[key] = value;
+    process.env[key] = unwrapQuotedEnvValue(value);
   }
 }
 
@@ -176,4 +180,20 @@ function isInternalServerError(error) {
     return true;
   }
   return error.status >= 500;
+}
+
+function readNonNegativeIntEnv(name, fallback) {
+  const raw = process.env[name];
+  if (raw == null || raw === "") return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return fallback;
+  return Math.floor(value);
+}
+
+function unwrapQuotedEnvValue(value) {
+  if (!value || value.length < 2) return value;
+  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    return value.slice(1, -1);
+  }
+  return value;
 }

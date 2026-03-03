@@ -172,3 +172,39 @@ test("proxy route supports DOI-like IDs with slashes", async (t) => {
   assert.equal(body.paperId, "DOI:10.18653/v1/N18-3011");
   assert.deepEqual(body.queryEcho, { fields: "title" });
 });
+
+test("proxy resolves NBER working paper id to DOI before S2 fetch", async (t) => {
+  const upstream = createMockUpstream();
+  const upstreamHandle = await listen(upstream.server);
+  const proxyHandle = await buildProxyServer({ upstreamBaseUrl: upstreamHandle.baseUrl });
+
+  t.after(async () => {
+    await proxyHandle.close();
+    await upstreamHandle.close();
+  });
+
+  const encoded = encodeURIComponent("NBER:w12345");
+  const response = await fetch(`${proxyHandle.baseUrl}/api/paper/${encoded}?fields=title`);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.paperId, "DOI:10.3386/w12345");
+  assert.deepEqual(body.queryEcho, { fields: "title" });
+});
+
+test("proxy resolves namespaced NBER paper URL input to DOI before S2 fetch", async (t) => {
+  const upstream = createMockUpstream();
+  const upstreamHandle = await listen(upstream.server);
+  const proxyHandle = await buildProxyServer({ upstreamBaseUrl: upstreamHandle.baseUrl });
+
+  t.after(async () => {
+    await proxyHandle.close();
+    await upstreamHandle.close();
+  });
+
+  const encoded = encodeURIComponent("NBER:https://www.nber.org/papers/w12345");
+  const response = await fetch(`${proxyHandle.baseUrl}/api/paper/${encoded}?fields=title`);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.paperId, "DOI:10.3386/w12345");
+  assert.deepEqual(body.queryEcho, { fields: "title" });
+});

@@ -232,6 +232,32 @@ a {
   border-color: var(--line);
 }
 
+.toolbar-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f6f1e5;
+  color: var(--ink);
+  font-size: 0.88rem;
+}
+
+.toolbar-select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0.25rem 0.4rem;
+  min-height: 32px;
+}
+
+.toolbar-select:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, white);
+  outline-offset: 2px;
+}
+
 .toolbar-hint {
   color: #6d675c;
   font-size: 0.85rem;
@@ -346,6 +372,18 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.review-sort-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.review-sort-control .toolbar-select {
+  min-width: 7.5rem;
 }
 
 #sidecar-source-link {

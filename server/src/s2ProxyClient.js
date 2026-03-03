@@ -10,12 +10,16 @@ export function createS2ProxyClient({
   cache = new TTLCache(),
   logger = console,
   retryBackoffMs = 300,
+  minIntervalMs = 0,
 } = {}) {
   if (typeof fetchImpl !== "function") {
     throw new Error("A fetch implementation is required");
   }
 
   const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+  const normalizedMinIntervalMs = normalizeMinInterval(minIntervalMs);
+  let fetchQueue = Promise.resolve();
+  let nextFetchAllowedAt = 0;
 
   async function getPaper(paperId, query = {}) {
     return requestJson(`/paper/${encodeURIComponent(paperId)}`, query);
@@ -27,6 +31,13 @@ export function createS2ProxyClient({
 
   async function getReferences(paperId, query = {}) {
     return requestJson(`/paper/${encodeURIComponent(paperId)}/references`, query);
+  }
+
+  async function searchPaperMatch(queryText, query = {}) {
+    return requestJson("/paper/search/match", {
+      query: queryText,
+      ...query,
+    });
   }
 
   async function requestJson(pathname, query = {}) {
@@ -79,7 +90,7 @@ export function createS2ProxyClient({
   }
 
   async function fetchWithRetry(url, options) {
-    const first = await fetchImpl(url, options);
+    const first = await throttledFetch(url, options);
     if (!isRetryable(first.status)) {
       return first;
     }
@@ -88,17 +99,45 @@ export function createS2ProxyClient({
     const waitMs = retryAfter != null ? retryAfter * 1000 : retryBackoffMs;
     await delay(waitMs);
 
-    return fetchImpl(url, options);
+    return throttledFetch(url, options);
+  }
+
+  async function throttledFetch(url, options) {
+    if (!normalizedMinIntervalMs) {
+      return fetchImpl(url, options);
+    }
+
+    const scheduled = fetchQueue.then(async () => {
+      const now = Date.now();
+      const waitMs = Math.max(0, nextFetchAllowedAt - now);
+      if (waitMs > 0) {
+        logger?.debug?.(`s2 throttle wait ${waitMs}ms`);
+        await delay(waitMs);
+      }
+
+      nextFetchAllowedAt = Date.now() + normalizedMinIntervalMs;
+      return fetchImpl(url, options);
+    });
+
+    // Keep the queue alive even if an upstream request fails.
+    fetchQueue = scheduled.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    return scheduled;
   }
 
   return {
     getPaper,
     getCitations,
     getReferences,
+    searchPaperMatch,
     _internals: {
       requestJson,
       cache,
       baseUrl: normalizedBaseUrl,
+      minIntervalMs: normalizedMinIntervalMs,
     },
   };
 }
@@ -124,4 +163,10 @@ function parseRetryAfter(value) {
 function delay(ms) {
   if (!ms || ms <= 0) return Promise.resolve();
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeMinInterval(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.floor(n);
 }

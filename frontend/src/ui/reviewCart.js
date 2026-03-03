@@ -1,5 +1,7 @@
-export function createReviewCart({ countEl, listEl, exportBtnEl, onExport, onSelectNode } = {}) {
-  exportBtnEl?.addEventListener("click", () => onExport?.());
+export function createReviewCart({ countEl, listEl, exportBtnEl, exportSortEl, onExport, onSelectNode } = {}) {
+  exportBtnEl?.addEventListener("click", () => onExport?.({
+    sortBy: exportSortEl?.value || "author",
+  }));
 
   listEl?.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-paper-id]");
@@ -11,6 +13,9 @@ export function createReviewCart({ countEl, listEl, exportBtnEl, onExport, onSel
     const items = Array.isArray(nodes) ? nodes : [];
     countEl.textContent = String(items.length);
     exportBtnEl.disabled = items.length === 0;
+    if (exportSortEl) {
+      exportSortEl.disabled = items.length === 0;
+    }
 
     listEl.replaceChildren();
     if (!items.length) {
