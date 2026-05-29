@@ -1,23 +1,9 @@
 {
-  "name": "lit-graph",
   "outputDirectory": "frontend",
-  "env": {
-    "S2_API_KEY": "@s2_api_key",
-    "S2_API_BASE_URL": "@s2_api_base_url",
-    "S2_MIN_INTERVAL_MS": "@s2_min_interval_ms"
-  },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/healthz",
-      "dest": "/api/healthz"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
