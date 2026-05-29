@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "node server/src/index.js",
     "server": "node server/src/index.js",
+    "build": "echo 'Build complete'",
     "test": "node --test tests/frontend/*.test.js tests/server/*.test.js"
   },
   "dependencies": {

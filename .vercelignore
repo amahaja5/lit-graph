@@ -1,0 +1,7 @@
+tests/
+server/
+.git
+.gitignore
+README.md
+FEATURES.md
+swagger.json
