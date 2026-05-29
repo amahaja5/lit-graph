@@ -1,213 +1,270 @@
-# LitGraph: Interactive Literature Snowballing Explorer
+# LitGraph
+
+Interactive literature snowballing explorer built on the Semantic Scholar Graph API.
 
 ## Overview
 
-**LitGraph** is an interactive literature mapping tool for exploring citation and reference neighborhoods around a seed paper using the Semantic Scholar Graph API (S2AG).
+LitGraph starts from a single seed paper and lets you inspect its citation neighborhood without immediately flooding the graph.
 
-Starting from a single paper identifier (Semantic Scholar `paperId`, `DOI:<doi>`, `ARXIV:<id>`, and other S2-supported formats), the app renders a graph node for the seed paper. Clicking an unexplored node triggers a one-step expansion that fetches both:
+Current interaction model:
 
-- papers that **cite** the selected paper (`/citations`)
-- papers that the selected paper **references** (`/references`)
+1. Enter a supported paper identifier and load the seed paper.
+2. LitGraph automatically bootstraps the seed into a denser first-hop neighborhood.
+3. Click a node to select it and fetch richer paper details if needed.
+4. Review the abstract and metadata in the side panel.
+5. Click **Expand Node** to fetch first-page citations and references for that node.
 
-The graph is filtered and ranked client-side to keep the visualization readable.
+The graph stays readable by:
+
+- limiting each expansion to the first upstream page (`limit=100`)
+- ranking and filtering candidates client-side
+- rendering up to `18` citations and `18` references for the seed bootstrap, then up to `15` per side for later manual expansions
+- preventing duplicate refetches for already-expanded nodes
 
 ## Status
 
-- `Prototype MVP scaffold implemented`
-- Repo includes:
-  - a browser frontend (`Vanilla JS + D3`)
-  - a lightweight Node/Express proxy for S2 requests
-  - tests for normalization/ranking/store logic and proxy behavior
-  - `swagger.json` (Semantic Scholar Graph API Swagger reference)
-- Verification status in this environment:
-  - frontend/unit tests pass
-  - proxy tests are implemented but require installing `express` first (`npm install` was blocked here by network restrictions)
+- `Prototype MVP implemented`
+- Frontend: Vanilla JS + D3
+- Backend: Node + Express proxy for Semantic Scholar
+- Current exports:
+  - BibTeX (`.bib`)
+  - identifier text (`.txt`) with Semantic Scholar / ArXiv / NBER identities
+- Current workspace verification:
+  - `node --test tests/frontend/*.test.js` passes
+  - `node --test tests/server/*.test.js` passes
 
-## MVP Scope (Phase 1)
+## Supported Seed Inputs
 
-### Included
+LitGraph is identifier-driven. It does not currently support free-text paper search.
 
-- Seed fetch by paper identifier (`DOI`, `ARXIV`, S2 `paperId`, and other S2-supported IDs)
-- One-click, one-level expansion (`citations` + `references`)
-- D3 force graph rendering with node state colors (`unexplored`, `loading`, `expanded`, `error`)
-- Metadata side panel (title, authors, abstract, venue, citation metrics)
-- Review cart (select papers for export)
-- BibTeX export (`citationStyles`) with fallback entries and sort by author/year
-- Lightweight backend proxy for Semantic Scholar API requests (allowlisted routes + query params)
-- In-memory cache and basic retry/error normalization in the proxy
+Accepted inputs:
 
-### Explicitly Excluded (MVP)
+- Semantic Scholar `paperId`
+- `DOI:<doi>`
+- `ARXIV:<id>`
+- `NBER:w12345`
+- `NBER:https://www.nber.org/papers/w12345`
 
+Notes:
+
+- `NBER:` is treated as a namespaced identifier, just like `DOI:` and `ARXIV:`.
+- Bare NBER IDs like `w12345` are not accepted.
+- DOI-like identifiers containing slashes are supported by the proxy route.
+
+## MVP Scope
+
+Included in the current app:
+
+- automatic first-hop expansion for the seed paper
+- manual one-level expansion via citations + references
+- selectable node details with abstract hydration on click
+- D3 graph rendering with drag, zoom, hover highlighting, and state colors
+- year-oriented layout toggle plus free-force layout
+- expansion mode toggle:
+  - `Top relevance`
+  - `Lesser-known sample`
+- review cart
+- BibTeX export sorted by `author` or `year`
+- identifier text export sorted by `author` or `year`
+- Node/Express proxy with allowlisted routes, caching, retry handling, and rate limiting
+
+Not implemented:
+
+- free-text search/autocomplete UI
+- recursive multi-hop crawling
+- persistence or saved sessions
 - JSON export
-- Search/autocomplete/title-match UI
-- Multi-hop automatic traversal
-- Persistence/accounts/saved sessions
-- Advanced clustering/layout modes
-- Production observability/hardening
+- server-side database/storage
 
-## Phase 2 / Future Enhancements
+## Architecture
 
-- Citation style variants and richer BibTeX customization
-- Search/autocomplete/title-match flows (`/paper/search`, `/paper/autocomplete`, etc.)
-- Saved sessions / graph persistence
-- Pagination controls for large expansions (follow `next` beyond first page)
-- Advanced filters (date range, venue, intent, influence)
-- Clustering/layout modes for dense graphs
+- Frontend visualization: D3 force simulation
+- Frontend app logic: vanilla ES modules
+- Backend proxy: Express
+- Upstream API: Semantic Scholar Graph API
+- Resolver: namespaced NBER inputs resolved server-side before S2 fetch
+- State: in-memory browser `GraphStore`
 
-## Architecture & Tech Stack
+## API Integration
 
-- **Frontend visualization:** D3.js (`d3-force`, `d3-zoom`, drag)
-- **Frontend app logic:** Vanilla JavaScript modules
-- **Backend proxy:** Node.js + Express
-- **Data source:** Semantic Scholar Graph API (`swagger.json` included)
-- **State management:** In-memory `GraphStore` in the browser
-- **Styling:** CSS Grid/Flexbox
+The app talks to Semantic Scholar through the local proxy only. The browser never sends `x-api-key` directly to Semantic Scholar.
 
-## Data Layer: S2AG API Integration
-
-The app uses the Semantic Scholar Graph API (S2AG) as the sole literature graph source for the MVP.
-
-### Practical API Note (Auth & Deployment)
-
-The Swagger documentation notes that API keys (when required) must be sent in the `x-api-key` header. A pure client-side prototype can work for local use, but this MVP intentionally uses a backend proxy to:
-
-- avoid exposing API keys in browser code
-- add caching for repeated paper fetches
-- normalize upstream errors for the UI
-- add a basic retry for `429` / `5xx`
-
-### Core S2 Endpoints Used
-
-- `GET /graph/v1/paper/{paper_id}` (seed paper)
-- `GET /graph/v1/paper/{paper_id}/citations` (forward snowballing)
-- `GET /graph/v1/paper/{paper_id}/references` (backward snowballing)
-
-### Proxy Endpoints (Implemented in this repo)
+### Proxy Routes
 
 - `GET /healthz`
 - `GET /api/paper/:paperId(*)`
 - `GET /api/paper/:paperId(*)/citations`
 - `GET /api/paper/:paperId(*)/references`
 
-Note: `:paperId(*)` is intentional so IDs with slashes (for example DOI forms) are supported.
+The `:paperId(*)` route form is intentional so namespaced IDs with slashes, especially DOI forms, work correctly.
 
-### API Constraints (MVP assumptions)
+### Semantic Scholar Endpoints Used
 
-- API key may be required via `x-api-key`
-- Pagination uses `offset` + `next`
-- `limit <= 1000` (validated by proxy)
-- CORS/rate-limit behavior may vary in practice (proxy mitigates this)
-- Large field selections (especially `abstract`/`contexts`) can produce heavy responses
+- `GET /graph/v1/paper/{paper_id}`
+- `GET /graph/v1/paper/{paper_id}/citations`
+- `GET /graph/v1/paper/{paper_id}/references`
+- `GET /graph/v1/paper/search/match`
+  - used only as a fallback during some NBER resolution flows
 
-### Field Minimization Strategy
+### NBER Resolution
 
-The MVP keeps requests bounded and visualization responsive by:
+`NBER:` inputs are resolved server-side in [`server/src/paperIdResolver.js`](/Users/amahajan/src/lit-graph/server/src/paperIdResolver.js).
 
-- fetching **first page only** (`offset=0`, `limit=100`) for citations and references
-- ranking/filtering client-side and rendering only top `N=15` per side
-- requesting fields needed for graph + sidecar display only
-- treating `contexts` as optional metadata (fetched but not fully rendered in the UI)
-- surfacing a truncation notice when `next` is present
+Resolution behavior:
 
-## Relevance & Sorting Engine
+- `NBER:w12345` first tries `DOI:10.3386/w12345`
+- if that DOI is not indexed by Semantic Scholar, the resolver fetches the NBER paper page
+- if a DOI is present on the page, it uses that
+- otherwise it falls back to `paper/search/match` on the extracted title
 
-To keep the graph from turning into an unreadable hairball, citation/reference results are normalized into a common candidate shape before sorting and rendering.
+### Request Strategy
 
-Sorting priority (descending unless noted):
+Seed/detail fetches request:
 
-1. `isInfluential` (`true` first)
-2. nested paper `influentialCitationCount` (`null` treated as `0`)
-3. nested paper `citationCount` (`null` treated as `0`)
+- `title,authors,year,abstract,citationCount,influentialCitationCount,referenceCount,url,venue`
+
+Expansion fetches request:
+
+- `isInfluential,contexts,title,authors,year,abstract,citationCount,influentialCitationCount,referenceCount,url,venue`
+
+Export fetches request narrower field sets:
+
+- BibTeX export: `title,authors,year,citationStyles`
+- identifier export: `title,paperId,url,externalIds`
+
+### Proxy Behavior
+
+- allowlisted query params only
+- `limit` validated to `1..1000`
+- in-memory cache with `10 minute` TTL
+- one retry for `429` and `5xx`
+- standardized error envelope
+- global outbound request throttle for Semantic Scholar
+
+Default throttle:
+
+- `S2_MIN_INTERVAL_MS=1100`
+- this is meant to stay below a `1 request / second` upstream limit
+
+Important note:
+
+- if you inspect browser devtools, you will only see requests to `localhost:3001`
+- the Semantic Scholar API key is attached only by the proxy on the server-side hop
+
+## Expansion Modes
+
+### Top relevance
+
+Candidates are ranked by:
+
+1. `isInfluential`
+2. `influentialCitationCount`
+3. `citationCount`
 4. `year` (`null` last)
-5. `paperId` (ascending, for deterministic ordering)
+5. `paperId` (stable tie-break)
 
-After sorting, the app slices to the top `N` results per side (`N=15` by default):
+### Lesser-known sample
 
-- up to `15` citations
-- up to `15` references
+This mode intentionally avoids the dominant head of the ranked list when enough results exist, then samples from the long tail with bias toward:
 
-## Application State & Memory
+- lower citation counts
+- lower influential citation counts
+- non-influential papers
 
-The browser uses a centralized `GraphStore` to avoid duplicate nodes/links and guard against repeated fetches.
+This is meant for exploratory surveying rather than pure relevance expansion.
 
-### Normalized Shapes (Implementation Contract)
+## Graph and UI Behavior
 
-```js
-// frontend/src/graphStore.js + frontend/src/normalize.js
-PaperNode = {
-  id, paperId, title, year, abstract, authors,
-  citationCount, influentialCitationCount, referenceCount,
-  url, venue,
-  state,              // "unexplored" | "loading" | "expanded" | "error"
-  isRoot,
-  isSelected,
-  isInReviewCart,
-  errorMessage
-}
+- Click node: select it and load details if needed
+- Expand button: fetch citations + references for the selected node
+- Expanded nodes are not refetched in the MVP
+- Error-state nodes can be retried
+- Review cart is in-memory only
 
-GraphLink = {
-  id,                 // `${source}->${target}:${relation}`
-  source,
-  target,
-  relation,           // "citation" | "reference"
-  isInfluential,
-  contextsCount
-}
+Layout controls:
 
-ExpansionCandidate = {
-  relation,
-  sourcePaperId,
-  targetPaper,
-  isInfluential,
-  contexts
-}
+- `Year Layout: On`
+  - older papers left, newer papers right
+  - unknown-year papers are placed in a separate upper lane
+- `Year Layout: Off`
+  - free force layout
+
+## Exports
+
+### BibTeX Export
+
+- uses Semantic Scholar `citationStyles.bibtex` when available
+- falls back to generated `@misc` entries when needed
+- sort options:
+  - `Author` = first-author surname order
+  - `Year` = ascending year, unknown years last
+- filenames are unique and include a UTC timestamp plus random suffix
+
+### Identifier Text Export
+
+The `.txt` export is tab-separated and includes:
+
+- `semanticScholarUrl`
+- `arxiv`
+- `nber`
+- `paperId`
+- `title`
+
+Identifier rules:
+
+- ArXiv values are taken from `externalIds` when present, or inferred from `ARXIV:` paper IDs
+- NBER values are taken from `externalIds` when present, or inferred from DOI patterns like `10.3386/w####`
+
+## Development Quick Start
+
+### Prerequisites
+
+- Node.js 22+
+- npm 10+
+
+### Install
+
+```bash
+npm install
+cp .env.example .env
 ```
 
-### Dedupe and Guard Rules
+### Environment
 
-- `nodes` are keyed by S2 `paperId`
-- `links` are deduped by `${source}->${target}:${relation}`
-- duplicate clicks while a node is `loading` are ignored
-- nodes already `expanded` are selectable but **not refetched** in the MVP
-- nodes in `error` state can be retried
+`.env.example` currently contains:
 
-## View Layer (D3 Render Cycle)
+```env
+S2_API_KEY=
+S2_MIN_INTERVAL_MS=1100
+PORT=3001
+S2_API_BASE_URL=https://api.semanticscholar.org/graph/v1
+```
 
-The D3 graph is a visual projection of `GraphStore` state.
+Recommended setup:
 
-- `d3.forceSimulation` with link / charge / center / collide forces
-- Incremental joins keyed by `node.id` and `link.id`
-- Zoom/pan and drag enabled
-- Node size scales logarithmically with `citationCount`
-- Node colors reflect state (`root`, `unexplored`, `loading`, `expanded`, `error`)
-- Hover highlights connected edges/nodes
-- Simulation reheats on updates
+- set `S2_API_KEY` to your approved Semantic Scholar key
+- keep `S2_MIN_INTERVAL_MS=1100` unless your approved rate limit changes
 
-## UI/UX Flow & Exporting
+The `.env` loader also accepts quoted values, so both of these work:
 
-1. User enters a paper identifier and clicks **Load Seed**.
-2. The app fetches the seed paper and renders the root node.
-3. Clicking a node selects it and loads details (including abstract when available).
-4. **Expand Node** (manual) triggers parallel fetches for citations/references.
-5. **Add to Review** toggles the paper in the review cart.
-6. **Export BibTeX** downloads selected papers as a `.bib` file.
+```env
+S2_API_KEY=abc123
+S2_API_KEY="abc123"
+```
 
-### MVP Export: BibTeX
+### Run
 
-BibTeX export uses Semantic Scholar `citationStyles.bibtex` entries and supports review-cart ordering by:
+```bash
+npm run dev
+```
 
-- first author (`Author` option)
-- publication year (`Year` option)
+App URL: [http://localhost:3001](http://localhost:3001)
 
-When `citationStyles.bibtex` is unavailable for a paper, the app generates a fallback `@misc` entry using available metadata.
+### Test
 
-### Error / Empty State UX (Implemented)
-
-- invalid ID / not found
-- upstream API errors (`400`, `404`, `429`, `5xx`) via standardized proxy envelope
-- empty expansion (no eligible nodes after filtering)
-- truncation notice when only the first page is used (`next` present)
-- loading state and disabled duplicate expansion while requests are in flight
+```bash
+npm test
+```
 
 ## Project Structure
 
@@ -215,99 +272,57 @@ When `citationStyles.bibtex` is unavailable for a paper, the app generates a fal
 frontend/
   index.html
   src/
-    main.js
     apiClient.js
     bibtex.js
+    graphRenderer.js
+    graphStore.js
+    identifiers.js
+    main.js
     normalize.js
     rank.js
-    graphStore.js
-    graphRenderer.js
     styles.css
     ui/
+      reviewCart.js
       searchBar.js
       sidecar.js
-      reviewCart.js
 server/
   src/
-    index.js
-    s2ProxyClient.js
     cache.js
     errors.js
+    index.js
+    paperIdResolver.js
+    s2ProxyClient.js
 tests/
   frontend/
     bibtex.test.js
+    graphStore.test.js
+    identifiers.test.js
     normalize.test.js
     rank.test.js
-    graphStore.test.js
   server/
+    paperIdResolver.test.js
     proxy.test.js
+    s2ProxyClient.test.js
+.env.example
+FEATURES.md
+package.json
 README.md
 swagger.json
 ```
 
-## Development Quick Start
-
-### Prerequisites
-
-- Node.js 22+ (tested in this environment with `v22.17.1`)
-- npm 10+
-
-### Setup
-
-```bash
-npm install
-cp .env.example .env
-```
-
-Set `S2_API_KEY` in `.env` (or export it in your shell) if your Semantic Scholar usage requires a key.
-Set `S2_MIN_INTERVAL_MS` to match your approved Semantic Scholar rate limit (the default in this repo is `1100ms`, which stays under `1 req/sec`).
-
-### Run the App
-
-```bash
-npm run dev
-```
-
-Default server URL: [http://localhost:3001](http://localhost:3001)
-
-### Run Tests
-
-```bash
-npm test
-```
-
-If you have not run `npm install`, frontend unit tests can still be run directly (they do not require Express):
-
-```bash
-node --test tests/frontend/*.test.js
-```
-
-## Testing Coverage (Current)
-
-### Frontend tests
-
-- normalization of S2 payloads
-- ranking/slicing determinism
-- `GraphStore` merge/dedupe/state transitions/export shape
-
-### Proxy tests (implemented)
-
-- query allowlist enforcement
-- standardized upstream error mapping
-- caching behavior
-- single retry on `429`
-- DOI-like IDs with slashes (`:paperId(*)` routing)
-
 ## Known Limitations
 
-- Graphs become dense quickly after a few expansions
-- First-page-only fetch can omit relevant papers when citation/reference counts are large
-- Metadata completeness varies across papers (missing abstracts/authors/venue are common)
-- Citation influence and contexts can be sparse or absent
-- Review cart and graph state are in-memory only (reset on refresh)
-- Expanded nodes are not refetched in the MVP
+- first-page-only expansion can miss important papers in large neighborhoods
+- graphs still get dense after a few manual expansions
+- metadata coverage depends on Semantic Scholar completeness
+- `citationStyles.bibtex` is not available for every paper
+- identifier export depends on `externalIds` and DOI patterns, so some rows will be partial
+- no persistence across refreshes
 
 ## Swagger Reference
 
-- `/swagger.json` contains the Semantic Scholar Academic Graph API Swagger used to design this MVP.
-- The repo currently focuses on paper graph endpoints only, though the Swagger spec includes author/search/snippet endpoints that are reserved for future work.
+[`swagger.json`](/Users/amahajan/src/lit-graph/swagger.json) is the Semantic Scholar Graph API reference used to design this app. The current implementation focuses on paper graph endpoints, plus `paper/search/match` for NBER fallback resolution.
+
+## Additional Docs
+
+[`FEATURES.md`](/Users/amahajan/src/lit-graph/FEATURES.md) maps the implemented LitGraph capabilities into agent-friendly features and integration patterns for paper-reading systems.

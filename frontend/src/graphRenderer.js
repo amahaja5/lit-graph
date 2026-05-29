@@ -9,6 +9,13 @@ const STATE_COLORS = {
 
 const LAYOUT_MODE_FORCE = "force";
 const LAYOUT_MODE_YEAR = "year";
+const LINK_DISTANCE = 68;
+const LINK_STRENGTH = 0.26;
+const DEFAULT_CHARGE = -120;
+const ROOT_CHARGE = -180;
+const COLLIDE_PADDING = 2;
+const CENTERING_X_STRENGTH = 0.18;
+const CENTERING_Y_STRENGTH = 0.14;
 
 export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLayoutMode = LAYOUT_MODE_YEAR } = {}) {
   if (!svgEl) throw new Error("svgEl is required");
@@ -51,12 +58,12 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
 
   const simulation = d3
     .forceSimulation([])
-    .force("link", d3.forceLink([]).id((d) => d.id).distance(85).strength(0.18))
-    .force("charge", d3.forceManyBody().strength(-160))
+    .force("link", d3.forceLink([]).id((d) => d.id).distance(LINK_DISTANCE).strength(LINK_STRENGTH))
+    .force("charge", d3.forceManyBody().strength((d) => (d?.isRoot ? ROOT_CHARGE : DEFAULT_CHARGE)))
     .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("collide", d3.forceCollide((d) => radiusForNode(d) + 4))
-    .force("xpos", d3.forceX(width / 2).strength(0.12))
-    .force("ypos", d3.forceY(height / 2).strength(0.08));
+    .force("collide", d3.forceCollide((d) => radiusForNode(d) + COLLIDE_PADDING))
+    .force("xpos", d3.forceX(width / 2).strength(CENTERING_X_STRENGTH))
+    .force("ypos", d3.forceY(height / 2).strength(CENTERING_Y_STRENGTH));
 
   let simNodesById = new Map();
   let hoverNodeId = null;
@@ -83,7 +90,7 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
 
     simulation.nodes(simNodes);
     simulation.force("link").links(simLinks);
-    simulation.force("collide").radius((d) => radiusForNode(d) + 4);
+    simulation.force("collide").radius((d) => radiusForNode(d) + COLLIDE_PADDING);
     applyLayoutForces(simNodes);
 
     currentLinkSelection = linkLayer
@@ -157,8 +164,8 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
 
       const fresh = {
         ...node,
-        x: width / 2 + (Math.random() - 0.5) * 40,
-        y: height / 2 + (Math.random() - 0.5) * 40,
+        x: width / 2 + (Math.random() - 0.5) * 24,
+        y: height / 2 + (Math.random() - 0.5) * 24,
       };
       nextMap.set(node.id, fresh);
       return fresh;
@@ -224,16 +231,16 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
 
       xForce
         .x((node) => (hasValidYear(node?.year) ? yearToX(node?.year, currentYearRange, width) : unknownYearX(node, width)))
-        .strength(validYears.length === 1 ? 0.12 : 0.5);
-      yForce.y((node) => laneY(node, height)).strength(0.12);
+        .strength(validYears.length === 1 ? CENTERING_X_STRENGTH : 0.6);
+      yForce.y((node) => laneY(node, height)).strength(CENTERING_Y_STRENGTH);
       drawYearGuides(currentYearRange);
     } else {
       currentYearRange = validYears.length > 0
         ? { minYear: Math.min(...validYears), maxYear: Math.max(...validYears) }
         : null;
 
-      xForce.x(width / 2).strength(0.12);
-      yForce.y(height / 2).strength(0.08);
+      xForce.x(width / 2).strength(CENTERING_X_STRENGTH);
+      yForce.y(height / 2).strength(CENTERING_Y_STRENGTH);
       clearYearGuides();
     }
   }
@@ -399,8 +406,9 @@ function normalizeLayoutMode(mode) {
 }
 
 function yearToX(year, range, width) {
-  const leftPad = 70;
-  const rightPad = 70;
+  const sidePad = Math.max(120, Math.min(220, width * 0.16));
+  const leftPad = sidePad;
+  const rightPad = sidePad;
   const usableWidth = Math.max(1, width - leftPad - rightPad);
   if (!range || !Number.isInteger(range.minYear) || !Number.isInteger(range.maxYear)) {
     return width / 2;
@@ -422,16 +430,16 @@ function laneY(node, height) {
   const centerY = height / 2;
   if (node?.isRoot) return centerY;
 
-  const laneCount = 7;
+  const laneCount = 5;
   const laneIndex = Math.abs(hashString(node?.id || "")) % laneCount;
   const laneOffset = laneIndex - (laneCount - 1) / 2;
-  const spacing = Math.max(26, Math.min(54, height * 0.08));
+  const spacing = Math.max(20, Math.min(36, height * 0.06));
   return centerY + laneOffset * spacing;
 }
 
 function unknownYearX(node, width) {
   const centerX = width / 2;
-  const spread = Math.max(60, Math.min(180, width * 0.12));
+  const spread = Math.max(48, Math.min(132, width * 0.09));
   const laneCount = 5;
   const laneIndex = Math.abs(hashString(node?.id || "")) % laneCount;
   const laneOffset = laneIndex - (laneCount - 1) / 2;

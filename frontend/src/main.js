@@ -6,6 +6,7 @@ import {
   normalizeBibtexSort,
   sortReviewNodesForBibtex,
 } from "./bibtex.js";
+import { buildIdentifiersText, extractPaperIdentifiers } from "./identifiers.js";
 import { GraphStore } from "./graphStore.js";
 import { normalizeCitationBatch, normalizeReferenceBatch, toPaperNode } from "./normalize.js";
 import {
@@ -19,6 +20,7 @@ import { createSidecar } from "./ui/sidecar.js";
 import { createReviewCart } from "./ui/reviewCart.js";
 
 const TOP_N_PER_SIDE = 15;
+const ROOT_BOOTSTRAP_TOP_N_PER_SIDE = 18;
 const EXPANSION_LIMIT = 100;
 
 const elements = {
@@ -49,6 +51,7 @@ const elements = {
   reviewList: document.querySelector("#review-list"),
   exportSortSelect: document.querySelector("#export-bibtex-sort"),
   exportBibtexBtn: document.querySelector("#export-bibtex-btn"),
+  exportIdentifiersBtn: document.querySelector("#export-identifiers-btn"),
 };
 
 const store = new GraphStore();
@@ -86,9 +89,11 @@ const sidecar = createSidecar({
 const reviewCart = createReviewCart({
   countEl: elements.reviewCount,
   listEl: elements.reviewList,
-  exportBtnEl: elements.exportBibtexBtn,
+  exportBibtexBtnEl: elements.exportBibtexBtn,
+  exportIdentifiersBtnEl: elements.exportIdentifiersBtn,
   exportSortEl: elements.exportSortSelect,
-  onExport: exportReviewCartBibtex,
+  onExportBibtex: exportReviewCartBibtex,
+  onExportIdentifiers: exportReviewIdentifiersText,
   onSelectNode: selectNode,
 });
 
@@ -125,8 +130,14 @@ async function loadSeedPaper(rawPaperId) {
     store.setRoot(rootNode);
     pendingNodeDetailFetches.clear();
     completedNodeDetailFetches.clear();
-    setStatus("Loaded seed paper. Click a node to view details, then use Expand Node.");
     renderApp();
+    setStatus("Loaded seed paper. Building the first-hop citation neighborhood...");
+    await expandNode(rootNode.paperId, {
+      isBootstrap: true,
+      requestId,
+      topNPerSide: ROOT_BOOTSTRAP_TOP_N_PER_SIDE,
+    });
+    if (requestId !== activeSeedRequestId) return;
   } catch (error) {
     if (requestId !== activeSeedRequestId) return;
     setError(formatErrorMessage(error));
@@ -207,7 +218,7 @@ async function hydrateNodeDetailsIfNeeded(nodeId) {
   }
 }
 
-async function expandNode(nodeId) {
+async function expandNode(nodeId, { isBootstrap = false, requestId = null, topNPerSide = TOP_N_PER_SIDE } = {}) {
   const node = store.getNode(nodeId);
   if (!node) return;
   if (!store.canExpand(nodeId)) {
@@ -219,7 +230,11 @@ async function expandNode(nodeId) {
   store.setNodeState(nodeId, "loading");
   store.setSelectedNode(nodeId);
   clearError();
-  setStatus(`Expanding ${node.title}...`);
+  setStatus(
+    isBootstrap && node.isRoot
+      ? `Bootstrapping ${node.title} with a denser first-hop neighborhood...`
+      : `Expanding ${node.title}...`,
+  );
   renderApp();
 
   try {
@@ -228,14 +243,18 @@ async function expandNode(nodeId) {
       limit: EXPANSION_LIMIT,
       offset: 0,
     });
+    if (requestId != null && requestId !== activeSeedRequestId) {
+      return;
+    }
 
     const citationBatch = normalizeCitationBatch(nodeId, citations);
     const referenceBatch = normalizeReferenceBatch(nodeId, references);
+    const selectionLimit = Math.max(1, Number.isFinite(topNPerSide) ? Math.floor(topNPerSide) : TOP_N_PER_SIDE);
 
-    const topCitations = selectCandidatesForMode(citationBatch.candidates, TOP_N_PER_SIDE, {
+    const topCitations = selectCandidatesForMode(citationBatch.candidates, selectionLimit, {
       mode: expansionMode,
     });
-    const topReferences = selectCandidatesForMode(referenceBatch.candidates, TOP_N_PER_SIDE, {
+    const topReferences = selectCandidatesForMode(referenceBatch.candidates, selectionLimit, {
       mode: expansionMode,
     });
     const mergedCandidates = [...topCitations, ...topReferences];
@@ -250,10 +269,13 @@ async function expandNode(nodeId) {
       setStatus("Expansion completed, but no eligible citation/reference nodes were returned for rendering.");
     } else {
       setStatus(
-        `${getExpansionModeLabel(expansionMode)} expansion complete: added up to ${topCitations.length} citation nodes and ${topReferences.length} reference nodes.`,
+        `${isBootstrap ? "Bootstrap " : ""}${getExpansionModeLabel(expansionMode)} expansion complete: added up to ${topCitations.length} citation nodes and ${topReferences.length} reference nodes.`,
       );
     }
   } catch (error) {
+    if (requestId != null && requestId !== activeSeedRequestId) {
+      return;
+    }
     store.setNodeState(nodeId, "error", { errorMessage: formatErrorMessage(error) });
     setError(formatErrorMessage(error));
     setStatus("");
@@ -303,10 +325,42 @@ async function exportReviewCartBibtex({ sortBy = "author" } = {}) {
 
   const payload = buildBibtexDocument(entries);
   const seedFragment = safeFileFragment(store.seedPaperId || "litgraph");
-  const fileName = `litgraph-review-${seedFragment}-${getBibtexSortLabel(sortMode)}.bib`;
+  const fileName = `litgraph-review-${seedFragment}-${getBibtexSortLabel(sortMode)}-${buildUniqueExportSuffix()}.bib`;
   downloadText(payload, fileName, "application/x-bibtex;charset=utf-8");
   const fallbackSuffix = fallbackCount > 0 ? ` (${fallbackCount} fallback entr${fallbackCount === 1 ? "y" : "ies"})` : "";
   setStatus(`Exported ${reviewNodes.length} paper(s) to ${fileName}${fallbackSuffix}`);
+}
+
+async function exportReviewIdentifiersText({ sortBy = "author" } = {}) {
+  const reviewNodes = store.getReviewCartNodes();
+  if (!reviewNodes.length) {
+    setError("Add at least one paper to the review cart before exporting.");
+    return;
+  }
+
+  const sortMode = normalizeBibtexSort(sortBy);
+  const sortedNodes = sortReviewNodesForBibtex(reviewNodes, sortMode);
+  setStatus(`Preparing identifier export (${getBibtexSortLabel(sortMode)} order)...`);
+  clearError();
+
+  const rows = [];
+  let fallbackCount = 0;
+  for (const node of sortedNodes) {
+    try {
+      const paper = await api.fetchPaperIdentifiers(node.paperId);
+      rows.push(extractPaperIdentifiers(paper, node));
+    } catch {
+      fallbackCount += 1;
+      rows.push(extractPaperIdentifiers(null, node));
+    }
+  }
+
+  const payload = buildIdentifiersText(rows);
+  const seedFragment = safeFileFragment(store.seedPaperId || "litgraph");
+  const fileName = `litgraph-identifiers-${seedFragment}-${getBibtexSortLabel(sortMode)}-${buildUniqueExportSuffix()}.txt`;
+  downloadText(payload, fileName, "text/plain;charset=utf-8");
+  const fallbackSuffix = fallbackCount > 0 ? ` (${fallbackCount} partial entr${fallbackCount === 1 ? "y" : "ies"})` : "";
+  setStatus(`Exported identifiers for ${reviewNodes.length} paper(s) to ${fileName}${fallbackSuffix}`);
 }
 
 function renderApp() {
@@ -425,4 +479,20 @@ function safeFileFragment(value) {
     .replace(/[^a-zA-Z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48) || "litgraph";
+}
+
+function buildUniqueExportSuffix() {
+  const now = new Date();
+  const stamp = [
+    now.getUTCFullYear(),
+    String(now.getUTCMonth() + 1).padStart(2, "0"),
+    String(now.getUTCDate()).padStart(2, "0"),
+    "-",
+    String(now.getUTCHours()).padStart(2, "0"),
+    String(now.getUTCMinutes()).padStart(2, "0"),
+    String(now.getUTCSeconds()).padStart(2, "0"),
+    String(now.getUTCMilliseconds()).padStart(3, "0"),
+  ].join("");
+  const randomToken = Math.random().toString(36).slice(2, 8);
+  return `${stamp}-${randomToken}`;
 }

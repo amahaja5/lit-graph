@@ -17,6 +17,13 @@ export const BIBTEX_FIELDS = [
   "citationStyles",
 ].join(",");
 
+export const IDENTIFIER_FIELDS = [
+  "title",
+  "paperId",
+  "url",
+  "externalIds",
+].join(",");
+
 export const CITATION_FIELDS = [
   "isInfluential",
   "contexts",
@@ -70,6 +77,12 @@ export function createApiClient({ baseUrl = "" } = {}) {
     async fetchPaperBibtex(paperId) {
       return requestJson(buildUrl(`${baseUrl}/api/paper/${encodePathParam(paperId)}`, {
         fields: BIBTEX_FIELDS,
+      }));
+    },
+
+    async fetchPaperIdentifiers(paperId) {
+      return requestJson(buildUrl(`${baseUrl}/api/paper/${encodePathParam(paperId)}`, {
+        fields: IDENTIFIER_FIELDS,
       }));
     },
 

@@ -1,5 +1,17 @@
-export function createReviewCart({ countEl, listEl, exportBtnEl, exportSortEl, onExport, onSelectNode } = {}) {
-  exportBtnEl?.addEventListener("click", () => onExport?.({
+export function createReviewCart({
+  countEl,
+  listEl,
+  exportBibtexBtnEl,
+  exportIdentifiersBtnEl,
+  exportSortEl,
+  onExportBibtex,
+  onExportIdentifiers,
+  onSelectNode,
+} = {}) {
+  exportBibtexBtnEl?.addEventListener("click", () => onExportBibtex?.({
+    sortBy: exportSortEl?.value || "author",
+  }));
+  exportIdentifiersBtnEl?.addEventListener("click", () => onExportIdentifiers?.({
     sortBy: exportSortEl?.value || "author",
   }));
 
@@ -12,7 +24,12 @@ export function createReviewCart({ countEl, listEl, exportBtnEl, exportSortEl, o
   function render(nodes) {
     const items = Array.isArray(nodes) ? nodes : [];
     countEl.textContent = String(items.length);
-    exportBtnEl.disabled = items.length === 0;
+    if (exportBibtexBtnEl) {
+      exportBibtexBtnEl.disabled = items.length === 0;
+    }
+    if (exportIdentifiersBtnEl) {
+      exportIdentifiersBtnEl.disabled = items.length === 0;
+    }
     if (exportSortEl) {
       exportSortEl.disabled = items.length === 0;
     }
