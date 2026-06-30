@@ -25,7 +25,9 @@ The graph stays readable by:
 
 - `Prototype MVP implemented`
 - Frontend: Vanilla JS + D3
-- Backend: Node + Express proxy for Semantic Scholar
+- Backend:
+  - local development: Node + Express proxy
+  - deployment: Vercel serverless functions in `/api`
 - Current exports:
   - BibTeX (`.bib`)
   - identifier text (`.txt`) with Semantic Scholar / ArXiv / NBER identities
@@ -67,6 +69,7 @@ Included in the current app:
 - BibTeX export sorted by `author` or `year`
 - identifier text export sorted by `author` or `year`
 - Node/Express proxy with allowlisted routes, caching, retry handling, and rate limiting
+- Vercel deployment support with same-origin `/api/*` routes
 
 Not implemented:
 
@@ -80,18 +83,19 @@ Not implemented:
 
 - Frontend visualization: D3 force simulation
 - Frontend app logic: vanilla ES modules
-- Backend proxy: Express
+- Backend proxy: shared proxy logic, served by Express locally and Vercel functions in deployment
 - Upstream API: Semantic Scholar Graph API
 - Resolver: namespaced NBER inputs resolved server-side before S2 fetch
 - State: in-memory browser `GraphStore`
 
 ## API Integration
 
-The app talks to Semantic Scholar through the local proxy only. The browser never sends `x-api-key` directly to Semantic Scholar.
+The app talks to Semantic Scholar through the app's own proxy only. The browser never sends `x-api-key` directly to Semantic Scholar.
 
 ### Proxy Routes
 
-- `GET /healthz`
+- local dev health route: `GET /healthz`
+- deployed health route: `GET /api/healthz`
 - `GET /api/paper/:paperId(*)`
 - `GET /api/paper/:paperId(*)/citations`
 - `GET /api/paper/:paperId(*)/references`
@@ -148,7 +152,8 @@ Default throttle:
 
 Important note:
 
-- if you inspect browser devtools, you will only see requests to `localhost:3001`
+- in local development, browser requests go to `localhost:3001`
+- on Vercel, browser requests go to same-origin `/api/*`
 - the Semantic Scholar API key is attached only by the proxy on the server-side hop
 
 ## Expansion Modes
@@ -257,6 +262,39 @@ S2_API_KEY="abc123"
 ```bash
 npm run dev
 ```
+
+## Vercel Deployment
+
+LitGraph can be deployed directly on Vercel using the static frontend plus serverless API routes in `/api`.
+
+### Required Vercel Environment Variables
+
+```env
+S2_API_KEY=your_semantic_scholar_key
+S2_MIN_INTERVAL_MS=1100
+S2_API_BASE_URL=https://api.semanticscholar.org/graph/v1
+```
+
+Notes:
+
+- set `S2_API_KEY` in both Preview and Production if you use both environments
+- keep `S2_MIN_INTERVAL_MS=1100` unless Semantic Scholar approves a different rate limit
+- the current throttle is instance-local, so serverless scale-out can still exceed a strict shared upstream cap under enough concurrent traffic
+
+### Routing
+
+`/Users/amahajan/src/lit-graph/vercel.json` is configured so:
+
+- `/api/*` is handled by Vercel functions
+- all non-API routes fall back to `frontend/index.html`
+
+The SPA rewrite intentionally excludes `/api/*`; otherwise API requests can be served HTML instead of JSON.
+
+### Recommended Post-Deploy Checks
+
+1. Open `/api/healthz` and confirm it returns `{"ok":true}`.
+2. Open `/api/paper/ARXIV%3A1706.03762?fields=title` and confirm it returns JSON.
+3. Load the main app, search for a seed paper, and expand at least one node.
 
 App URL: [http://localhost:3001](http://localhost:3001)
 

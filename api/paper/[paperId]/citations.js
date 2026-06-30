@@ -9,49 +9,18 @@ export default async function handler(req, res) {
     return;
   }
 
-  let paperId;
-  let rawQuery = {};
-
   try {
     const split = splitRouteQuery(req.query);
-    paperId = requirePaperId(split.paperId);
-    rawQuery = split.query;
-
-    logDebug("citations request", {
-      method: req.method,
-      url: req.url,
-      paperId,
-      query: rawQuery,
-    });
+    const paperId = requirePaperId(split.paperId);
+    const rawQuery = split.query;
 
     const client = getS2Client();
     const query = sanitizeQuery(rawQuery, CITATIONS_QUERY_ALLOWLIST);
     validatePagingQuery(query);
     const data = await client.getCitations(paperId, query);
 
-    logDebug("citations success", {
-      method: req.method,
-      url: req.url,
-      paperId,
-      query,
-      resultCount: Array.isArray(data?.data) ? data.data.length : undefined,
-      next: data?.next,
-      offset: data?.offset,
-    });
-
     res.json(data);
   } catch (error) {
-    logError("citations error", {
-      method: req.method,
-      url: req.url,
-      paperId,
-      query: rawQuery,
-      code: error?.code,
-      status: error?.status,
-      upstreamStatus: error?.upstreamStatus,
-      message: error?.message,
-      stack: error?.stack,
-    });
     sendError(res, error);
   }
 }
@@ -109,12 +78,4 @@ function unwrapSingleValue(value) {
     return value[0];
   }
   return value;
-}
-
-function logDebug(message, details) {
-  console.debug(`[litgraph api] ${message}`, details);
-}
-
-function logError(message, details) {
-  console.error(`[litgraph api] ${message}`, details);
 }

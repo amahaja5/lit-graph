@@ -9,52 +9,20 @@ export default async function handler(req, res) {
     return;
   }
 
-  let rawPaperId;
-  let resolvedPaperId;
-  let rawQuery = {};
-
   try {
     const split = splitRouteQuery(req.query);
-    rawPaperId = requirePaperId(split.paperId);
-    rawQuery = split.query;
-
-    logDebug("paper request", {
-      method: req.method,
-      url: req.url,
-      paperId: rawPaperId,
-      query: rawQuery,
-    });
+    const rawPaperId = requirePaperId(split.paperId);
+    const rawQuery = split.query;
 
     const client = getS2Client();
     const resolver = getPaperIdResolver();
 
-    resolvedPaperId = await resolver.resolveSeedPaperId(rawPaperId);
+    const resolvedPaperId = await resolver.resolveSeedPaperId(rawPaperId);
     const query = sanitizeQuery(rawQuery, PAPER_QUERY_ALLOWLIST);
     const data = await client.getPaper(resolvedPaperId, query);
 
-    logDebug("paper success", {
-      method: req.method,
-      url: req.url,
-      paperId: rawPaperId,
-      resolvedPaperId,
-      query,
-      responseKeys: listKeys(data),
-    });
-
     res.json(data);
   } catch (error) {
-    logError("paper error", {
-      method: req.method,
-      url: req.url,
-      paperId: rawPaperId,
-      resolvedPaperId,
-      query: rawQuery,
-      code: error?.code,
-      status: error?.status,
-      upstreamStatus: error?.upstreamStatus,
-      message: error?.message,
-      stack: error?.stack,
-    });
     sendError(res, error);
   }
 }
@@ -97,16 +65,4 @@ function unwrapSingleValue(value) {
     return value[0];
   }
   return value;
-}
-
-function listKeys(value) {
-  return value && typeof value === "object" ? Object.keys(value).slice(0, 12) : [];
-}
-
-function logDebug(message, details) {
-  console.debug(`[litgraph api] ${message}`, details);
-}
-
-function logError(message, details) {
-  console.error(`[litgraph api] ${message}`, details);
 }
