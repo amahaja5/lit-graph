@@ -132,12 +132,19 @@ async function requestJson(url) {
     },
   });
 
+  const contentType = response.headers.get("content-type") || "";
   const text = await response.text();
   let data;
   if (text) {
     try {
       data = JSON.parse(text);
     } catch {
+      console.error("LitGraph API returned invalid JSON", {
+        url: response.url || url,
+        status: response.status,
+        contentType,
+        bodyPreview: previewText(text),
+      });
       throw new ApiError("Server returned invalid JSON", { status: response.status });
     }
   } else {
@@ -157,4 +164,10 @@ async function requestJson(url) {
   }
 
   return data;
+}
+
+function previewText(text, maxLength = 400) {
+  if (!text) return "";
+  const compact = String(text).replace(/\s+/g, " ").trim();
+  return compact.length <= maxLength ? compact : `${compact.slice(0, maxLength)}...`;
 }
