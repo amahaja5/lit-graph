@@ -13,6 +13,7 @@ Current interaction model:
 3. Click a node to select it and fetch richer paper details if needed.
 4. Review the abstract and metadata in the side panel.
 5. Click **Expand Node** to fetch first-page citations and references for that node.
+6. Add papers to the review cart, then generate a structured literature synthesis in the right panel.
 
 The graph stays readable by:
 
@@ -31,6 +32,8 @@ The graph stays readable by:
 - Current exports:
   - BibTeX (`.bib`)
   - identifier text (`.txt`) with Semantic Scholar / ArXiv / NBER identities
+- Current synthesis:
+  - structured review draft generated from the review cart via Anthropic
 - Current workspace verification:
   - `node --test tests/frontend/*.test.js` passes
   - `node --test tests/server/*.test.js` passes
@@ -66,6 +69,7 @@ Included in the current app:
   - `Top relevance`
   - `Lesser-known sample`
 - review cart
+- right-panel review draft generator
 - BibTeX export sorted by `author` or `year`
 - identifier text export sorted by `author` or `year`
 - Node/Express proxy with allowlisted routes, caching, retry handling, and rate limiting
@@ -99,6 +103,7 @@ The app talks to Semantic Scholar through the app's own proxy only. The browser 
 - `GET /api/paper/:paperId(*)`
 - `GET /api/paper/:paperId(*)/citations`
 - `GET /api/paper/:paperId(*)/references`
+- `POST /api/review/generate`
 
 The `:paperId(*)` route form is intentional so namespaced IDs with slashes, especially DOI forms, work correctly.
 
@@ -135,6 +140,7 @@ Export fetches request narrower field sets:
 
 - BibTeX export: `title,authors,year,citationStyles`
 - identifier export: `title,paperId,url,externalIds`
+- review generation batch fetch: `title,authors,year,abstract,url,venue,externalIds,isOpenAccess,openAccessPdf,textAvailability`
 
 ### Proxy Behavior
 
@@ -155,6 +161,7 @@ Important note:
 - in local development, browser requests go to `localhost:3001`
 - on Vercel, browser requests go to same-origin `/api/*`
 - the Semantic Scholar API key is attached only by the proxy on the server-side hop
+- Anthropic API calls also happen server-side only
 
 ## Expansion Modes
 
@@ -185,6 +192,8 @@ This is meant for exploratory surveying rather than pure relevance expansion.
 - Expanded nodes are not refetched in the MVP
 - Error-state nodes can be retried
 - Review cart is in-memory only
+- Review draft generation is manual, not automatic
+- Existing review drafts are marked `stale` when the review cart changes
 
 Layout controls:
 
@@ -220,6 +229,30 @@ Identifier rules:
 - ArXiv values are taken from `externalIds` when present, or inferred from `ARXIV:` paper IDs
 - NBER values are taken from `externalIds` when present, or inferred from DOI patterns like `10.3386/w####`
 
+## Review Draft
+
+- uses only the papers currently in the review cart
+- generation is enabled only when the cart contains `2..10` papers
+- source gathering priority:
+  - ArXiv abstract page
+  - NBER paper page
+  - DOI landing page
+  - upstream paper URL
+  - Semantic Scholar URL fallback
+- each paper is labeled `R1..Rn`
+- every claim in the structured synthesis is required to cite one or more of those `R#` references
+- HTML retrieval is best-effort
+- if readable HTML cannot be extracted, LitGraph falls back to `abstract_only` coverage and surfaces a warning
+- the current output sections are:
+  - `Corpus Overview`
+  - `Themes`
+  - `Methods / Evidence`
+  - `Agreements`
+  - `Disagreements`
+  - `Gaps`
+  - `Suggested Next Reads`
+  - `Evidence Limitations`
+
 ## Development Quick Start
 
 ### Prerequisites
@@ -243,18 +276,25 @@ S2_API_KEY=
 S2_MIN_INTERVAL_MS=1100
 PORT=3001
 S2_API_BASE_URL=https://api.semanticscholar.org/graph/v1
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=
+REVIEW_MAX_PAPERS=10
+REVIEW_MAX_SOURCE_CHARS_PER_PAPER=12000
 ```
 
 Recommended setup:
 
 - set `S2_API_KEY` to your approved Semantic Scholar key
 - keep `S2_MIN_INTERVAL_MS=1100` unless your approved rate limit changes
+- set `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` to enable review generation
+- keep `REVIEW_MAX_PAPERS=10` unless you intentionally want larger prompts and higher cost
 
 The `.env` loader also accepts quoted values, so both of these work:
 
 ```env
 S2_API_KEY=abc123
 S2_API_KEY="abc123"
+ANTHROPIC_MODEL="your-opus-model-name"
 ```
 
 ### Run
@@ -273,6 +313,10 @@ LitGraph can be deployed directly on Vercel using the static frontend plus serve
 S2_API_KEY=your_semantic_scholar_key
 S2_MIN_INTERVAL_MS=1100
 S2_API_BASE_URL=https://api.semanticscholar.org/graph/v1
+ANTHROPIC_API_KEY=your_anthropic_key
+ANTHROPIC_MODEL=your_opus_model_name
+REVIEW_MAX_PAPERS=10
+REVIEW_MAX_SOURCE_CHARS_PER_PAPER=12000
 ```
 
 Notes:
@@ -295,6 +339,7 @@ The SPA rewrite intentionally excludes `/api/*`; otherwise API requests can be s
 1. Open `/api/healthz` and confirm it returns `{"ok":true}`.
 2. Open `/api/paper/ARXIV%3A1706.03762?fields=title` and confirm it returns JSON.
 3. Load the main app, search for a seed paper, and expand at least one node.
+4. Add `2..10` papers to the review cart and generate a review draft.
 
 App URL: [http://localhost:3001](http://localhost:3001)
 

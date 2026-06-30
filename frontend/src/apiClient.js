@@ -109,6 +109,20 @@ export function createApiClient({ baseUrl = "" } = {}) {
       ]);
       return { citations, references };
     },
+
+    async generateReview(paperIds, {
+      mode = "html",
+      outputShape = "structured_synthesis",
+    } = {}) {
+      return requestJson(buildUrl(`${baseUrl}/api/review/generate`), {
+        method: "POST",
+        body: {
+          paperIds,
+          mode,
+          outputShape,
+        },
+      });
+    },
   };
 }
 
@@ -125,12 +139,20 @@ function encodePathParam(value) {
   return encodeURIComponent(String(value).trim());
 }
 
-async function requestJson(url) {
-  const response = await fetch(url, {
-    headers: {
-      accept: "application/json",
-    },
-  });
+async function requestJson(url, { method = "GET", body = undefined } = {}) {
+  const headers = {
+    accept: "application/json",
+  };
+  const init = {
+    method,
+    headers,
+  };
+  if (body !== undefined) {
+    headers["content-type"] = "application/json";
+    init.body = typeof body === "string" ? body : JSON.stringify(body);
+  }
+
+  const response = await fetch(url, init);
 
   const text = await response.text();
   let data;

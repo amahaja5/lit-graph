@@ -10,11 +10,17 @@ import { buildIdentifiersText, extractPaperIdentifiers } from "./identifiers.js"
 import { GraphStore } from "./graphStore.js";
 import { normalizeCitationBatch, normalizeReferenceBatch, toPaperNode } from "./normalize.js";
 import {
+  createInitialReviewDraftState,
+  getReviewGenerationGate,
+  markReviewDraftStale,
+} from "./reviewDraftState.js";
+import {
   EXPANSION_MODE_RELEVANCE,
   getExpansionModeLabel,
   selectCandidatesForMode,
 } from "./rank.js";
 import { createGraphRenderer } from "./graphRenderer.js";
+import { createReviewDraft } from "./ui/reviewDraft.js";
 import { createSearchBar } from "./ui/searchBar.js";
 import { createSidecar } from "./ui/sidecar.js";
 import { createReviewCart } from "./ui/reviewCart.js";
@@ -52,6 +58,12 @@ const elements = {
   exportSortSelect: document.querySelector("#export-bibtex-sort"),
   exportBibtexBtn: document.querySelector("#export-bibtex-btn"),
   exportIdentifiersBtn: document.querySelector("#export-identifiers-btn"),
+  reviewDraftBadge: document.querySelector("#review-draft-badge"),
+  reviewDraftStatus: document.querySelector("#review-draft-status"),
+  reviewDraftWarnings: document.querySelector("#review-draft-warnings"),
+  reviewDraftEmpty: document.querySelector("#review-draft-empty"),
+  reviewDraftContent: document.querySelector("#review-draft-content"),
+  generateReviewBtn: document.querySelector("#generate-review-btn"),
 };
 
 const store = new GraphStore();
@@ -97,9 +109,21 @@ const reviewCart = createReviewCart({
   onSelectNode: selectNode,
 });
 
+const reviewDraft = createReviewDraft({
+  buttonEl: elements.generateReviewBtn,
+  badgeEl: elements.reviewDraftBadge,
+  emptyEl: elements.reviewDraftEmpty,
+  contentEl: elements.reviewDraftContent,
+  statusEl: elements.reviewDraftStatus,
+  warningsEl: elements.reviewDraftWarnings,
+  onGenerate: generateReviewDraft,
+  onSelectReference: handleReviewReferenceSelect,
+});
+
 let activeSeedRequestId = 0;
 const pendingNodeDetailFetches = new Set();
 const completedNodeDetailFetches = new Set();
+let reviewDraftState = createInitialReviewDraftState();
 
 elements.resetViewBtn.addEventListener("click", () => renderer.resetView());
 elements.layoutModeBtn.addEventListener("click", toggleLayoutMode);
@@ -130,6 +154,7 @@ async function loadSeedPaper(rawPaperId) {
     store.setRoot(rootNode);
     pendingNodeDetailFetches.clear();
     completedNodeDetailFetches.clear();
+    reviewDraftState = createInitialReviewDraftState();
     renderApp();
     setStatus("Loaded seed paper. Building the first-hop citation neighborhood...");
     await expandNode(rootNode.paperId, {
@@ -290,8 +315,53 @@ function toggleReviewSelection(nodeId) {
   if (node) {
     setStatus(selected ? `Added to review cart: ${node.title}` : `Removed from review cart: ${node.title}`);
   }
+  reviewDraftState = markReviewDraftStale(reviewDraftState);
   clearError();
   renderApp();
+}
+
+async function generateReviewDraft() {
+  const reviewNodes = store.getReviewCartNodes();
+  const gate = getReviewGenerationGate(reviewNodes.length);
+  if (!gate.canGenerate) {
+    setError(gate.reason);
+    renderApp();
+    return;
+  }
+
+  reviewDraftState = {
+    ...reviewDraftState,
+    status: "loading",
+    stale: false,
+    errorMessage: "",
+  };
+  clearError();
+  setStatus("Generating structured literature synthesis...");
+  renderApp();
+
+  try {
+    const payload = await api.generateReview(reviewNodes.map((node) => node.paperId), {
+      mode: "html",
+      outputShape: "structured_synthesis",
+    });
+    reviewDraftState = {
+      status: "ready",
+      stale: false,
+      errorMessage: "",
+      payload,
+    };
+    setStatus(`Review generated from ${payload.references.length} paper(s).`);
+  } catch (error) {
+    reviewDraftState = {
+      ...reviewDraftState,
+      status: "error",
+      errorMessage: `Could not generate review: ${formatErrorMessage(error)}`,
+    };
+    setError(formatErrorMessage(error));
+    setStatus("");
+  } finally {
+    renderApp();
+  }
 }
 
 async function exportReviewCartBibtex({ sortBy = "author" } = {}) {
@@ -366,6 +436,7 @@ async function exportReviewIdentifiersText({ sortBy = "author" } = {}) {
 function renderApp() {
   const snapshot = store.snapshot();
   const selectedNode = snapshot.selectedNodeId ? store.getNode(snapshot.selectedNodeId) : null;
+  const reviewNodes = store.getReviewCartNodes();
 
   renderer.render(snapshot);
   updateLayoutControls(snapshot.nodes);
@@ -379,7 +450,12 @@ function renderApp() {
     canExpand: selectedNode ? store.canExpand(selectedNode.paperId) : false,
   });
 
-  reviewCart.render(store.getReviewCartNodes());
+  reviewCart.render(reviewNodes);
+  reviewDraft.render({
+    state: reviewDraftState,
+    gate: getReviewGenerationGate(reviewNodes.length),
+    referencesById: buildReviewReferenceIndex(reviewDraftState.payload?.references),
+  });
   renderNotices(snapshot.notices);
 }
 
@@ -453,6 +529,20 @@ function clearError() {
   searchBar.clearError();
 }
 
+function handleReviewReferenceSelect(refId, paperId = null) {
+  const targetPaperId = paperId
+    || reviewDraftState.payload?.references?.find((reference) => reference.refId === refId)?.paperId
+    || null;
+  if (!targetPaperId) return;
+
+  selectNode(targetPaperId);
+  const node = store.getNode(targetPaperId);
+  if (node) {
+    setStatus(`Selected ${refId}: ${node.title}`);
+    hydrateNodeDetailsIfNeeded(targetPaperId);
+  }
+}
+
 function formatErrorMessage(error) {
   if (!error) return "Unknown error";
   const base = error.message || String(error);
@@ -495,4 +585,13 @@ function buildUniqueExportSuffix() {
   ].join("");
   const randomToken = Math.random().toString(36).slice(2, 8);
   return `${stamp}-${randomToken}`;
+}
+
+function buildReviewReferenceIndex(references) {
+  const index = {};
+  for (const reference of Array.isArray(references) ? references : []) {
+    if (!reference?.refId) continue;
+    index[reference.refId] = reference;
+  }
+  return index;
 }

@@ -7,6 +7,9 @@ import { TTLCache } from "./cache.js";
 import { createS2ProxyClient } from "./s2ProxyClient.js";
 import { ProxyHttpError, badRequest, sendError } from "./errors.js";
 import { createPaperIdResolver } from "./paperIdResolver.js";
+import { createAnthropicClient } from "../../lib/anthropicClient.js";
+import { parseReviewGenerateRequestBody } from "../../lib/reviewRequest.js";
+import { createReviewService } from "../../lib/reviewService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,10 +22,19 @@ const PAPER_QUERY_ALLOWLIST = new Set(["fields"]);
 const CITATIONS_QUERY_ALLOWLIST = new Set(["fields", "limit", "offset", "publicationDateOrYear"]);
 const REFERENCES_QUERY_ALLOWLIST = new Set(["fields", "limit", "offset"]);
 
-export function createApp({ s2Client, paperIdResolver, serveFrontend = true, frontendDir = DEFAULT_FRONTEND_DIR, logger = console } = {}) {
+export function createApp({
+  s2Client,
+  paperIdResolver,
+  reviewService,
+  serveFrontend = true,
+  frontendDir = DEFAULT_FRONTEND_DIR,
+  logger = console,
+} = {}) {
   const client = s2Client || createDefaultS2Client({ logger });
   const resolver = paperIdResolver || createPaperIdResolver({ s2Client: client, logger });
+  const reviews = reviewService || createDefaultReviewService({ s2Client: client, logger });
   const app = express();
+  app.use(express.json({ limit: "1mb" }));
 
   app.get("/healthz", (_req, res) => {
     res.json({ ok: true });
@@ -67,6 +79,17 @@ export function createApp({ s2Client, paperIdResolver, serveFrontend = true, fro
     }
   });
 
+  app.post("/api/review/generate", async (req, res) => {
+    try {
+      const request = parseReviewGenerateRequestBody(req.body);
+      const payload = await reviews.generateReview(request);
+      res.json(payload);
+    } catch (error) {
+      logInternalServerError(logger, req, error);
+      sendError(res, error);
+    }
+  });
+
   if (serveFrontend) {
     app.use(express.static(frontendDir));
 
@@ -89,6 +112,16 @@ export function createDefaultS2Client({ logger = console } = {}) {
     apiKey: process.env.S2_API_KEY,
     cache: new TTLCache({ ttlMs: 10 * 60 * 1000 }),
     minIntervalMs: readNonNegativeIntEnv("S2_MIN_INTERVAL_MS", 1100),
+    logger,
+  });
+}
+
+export function createDefaultReviewService({ s2Client, logger = console } = {}) {
+  return createReviewService({
+    s2Client: s2Client || createDefaultS2Client({ logger }),
+    anthropicClient: createAnthropicClient(),
+    evidenceCache: new TTLCache({ ttlMs: 10 * 60 * 1000 }),
+    reviewCache: new TTLCache({ ttlMs: 10 * 60 * 1000 }),
     logger,
   });
 }
@@ -176,10 +209,10 @@ function logInternalServerError(logger, req, error) {
 }
 
 function isInternalServerError(error) {
-  if (!(error instanceof ProxyHttpError)) {
+  if (!(error instanceof ProxyHttpError) && error?.name !== "ProxyHttpError") {
     return true;
   }
-  return error.status >= 500;
+  return Number(error.status) >= 500;
 }
 
 function readNonNegativeIntEnv(name, fallback) {

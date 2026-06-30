@@ -77,8 +77,8 @@ function extractMessageFromBody(bodyText) {
 }
 
 export function sendError(res, error) {
-  const normalized = error instanceof ProxyHttpError
-    ? error
+  const normalized = isProxyLikeError(error)
+    ? normalizeProxyLikeError(error)
     : new ProxyHttpError({
         code: "internal_error",
         message: error?.message || "Unexpected server error",
@@ -101,4 +101,27 @@ export function sendError(res, error) {
   }
 
   res.status(normalized.status).json(payload);
+}
+
+function isProxyLikeError(error) {
+  return Boolean(
+    error
+    && typeof error === "object"
+    && (error instanceof ProxyHttpError || error.name === "ProxyHttpError")
+    && typeof error.status === "number",
+  );
+}
+
+function normalizeProxyLikeError(error) {
+  if (error instanceof ProxyHttpError) {
+    return error;
+  }
+
+  return new ProxyHttpError({
+    code: error.code,
+    message: error.message,
+    status: error.status,
+    upstreamStatus: error.upstreamStatus,
+    retryAfterSeconds: error.retryAfterSeconds,
+  });
 }

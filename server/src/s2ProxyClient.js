@@ -33,6 +33,24 @@ export function createS2ProxyClient({
     return requestJson(`/paper/${encodeURIComponent(paperId)}/references`, query);
   }
 
+  async function getPapersBatch(paperIds, query = {}) {
+    const ids = Array.isArray(paperIds)
+      ? [...new Set(paperIds.map((paperId) => String(paperId || "").trim()).filter(Boolean))]
+      : [];
+    if (!ids.length) {
+      return [];
+    }
+
+    return requestJson("/paper/batch", query, {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+      cacheKeySuffix: `ids=${ids.join(",")}`,
+      headers: {
+        "content-type": "application/json",
+      },
+    });
+  }
+
   async function searchPaperMatch(queryText, query = {}) {
     return requestJson("/paper/search/match", {
       query: queryText,
@@ -40,8 +58,9 @@ export function createS2ProxyClient({
     });
   }
 
-  async function requestJson(pathname, query = {}) {
-    const cacheKey = makeCacheKey(pathname, query);
+  async function requestJson(pathname, query = {}, requestOptions = {}) {
+    const { method = "GET", body = undefined, cacheKeySuffix = "", headers: extraHeaders = {} } = requestOptions;
+    const cacheKey = `${makeCacheKey(pathname, query)}${cacheKeySuffix ? `#${cacheKeySuffix}` : ""}`;
     const cached = cache.get(cacheKey);
     if (cached !== undefined) {
       logger?.debug?.(`cache hit ${cacheKey}`);
@@ -56,12 +75,17 @@ export function createS2ProxyClient({
 
     const headers = {
       accept: "application/json",
+      ...extraHeaders,
     };
     if (apiKey) {
       headers["x-api-key"] = apiKey;
     }
 
-    const response = await fetchWithRetry(url, { headers });
+    const response = await fetchWithRetry(url, {
+      method,
+      headers,
+      body,
+    });
     const contentType = response.headers.get("content-type") || "";
     const bodyText = await response.text();
 
@@ -132,6 +156,7 @@ export function createS2ProxyClient({
     getPaper,
     getCitations,
     getReferences,
+    getPapersBatch,
     searchPaperMatch,
     _internals: {
       requestJson,

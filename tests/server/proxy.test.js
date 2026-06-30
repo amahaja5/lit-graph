@@ -208,3 +208,98 @@ test("proxy resolves namespaced NBER paper URL input to DOI before S2 fetch", as
   assert.equal(body.paperId, "DOI:10.3386/w12345");
   assert.deepEqual(body.queryEcho, { fields: "title" });
 });
+
+test("proxy exposes review generation route", async (t) => {
+  const app = createApp({
+    serveFrontend: false,
+    logger: { error() {}, debug() {} },
+    reviewService: {
+      async generateReview(request) {
+        return {
+          schemaVersion: 1,
+          generatedAt: "2026-06-30T00:00:00.000Z",
+          model: "claude-test",
+          mode: request.mode,
+          outputShape: request.outputShape,
+          review: {
+            corpusOverview: { summary: "Overview", citations: ["R1"] },
+            themes: [],
+            methodsEvidence: [],
+            agreements: [],
+            disagreements: [],
+            gaps: [],
+            suggestedNextReads: [],
+            evidenceLimitations: [],
+          },
+          references: [{
+            refId: "R1",
+            paperId: "p1",
+            title: "Paper One",
+            year: 2024,
+            sourceUrl: "https://example.test/p1",
+            coverage: "abstract_only",
+          }],
+          warnings: [],
+          stale: false,
+        };
+      },
+    },
+  });
+  const server = http.createServer(app);
+  const handle = await listen(server);
+
+  t.after(async () => {
+    await handle.close();
+  });
+
+  const response = await fetch(`${handle.baseUrl}/api/review/generate`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      paperIds: ["p1", "p2"],
+      mode: "html",
+      outputShape: "structured_synthesis",
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.schemaVersion, 1);
+  assert.equal(body.references[0].refId, "R1");
+});
+
+test("proxy review route validates request body", async (t) => {
+  const app = createApp({
+    serveFrontend: false,
+    logger: { error() {}, debug() {} },
+    reviewService: {
+      async generateReview() {
+        throw new Error("should not be called");
+      },
+    },
+  });
+  const server = http.createServer(app);
+  const handle = await listen(server);
+
+  t.after(async () => {
+    await handle.close();
+  });
+
+  const response = await fetch(`${handle.baseUrl}/api/review/generate`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      paperIds: ["p1", "p2"],
+      mode: "pdf",
+      outputShape: "structured_synthesis",
+    }),
+  });
+
+  assert.equal(response.status, 400);
+  const body = await response.json();
+  assert.equal(body.error.code, "bad_request");
+});

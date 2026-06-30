@@ -11,6 +11,7 @@ LitGraph is already doing several useful pieces of paper-reading infrastructure:
 - citation/reference neighborhood expansion
 - ranked or exploratory candidate selection
 - lightweight curation via review cart
+- structured literature synthesis from a curated cart
 - export into formats useful for downstream reading workflows
 
 An agent framework does not need to reuse the UI to benefit from these pieces. The cleaner reuse path is:
@@ -258,9 +259,41 @@ Implementation:
 
 Agent framing:
 
-- use this as a small, explicit set of papers the agent or user has promoted for downstream work
+- use this as `select_for_review(paper_id)`
 
-### 10. BibTeX Export
+### 10. Structured Review Draft Generation
+
+What it does:
+
+- turns the current review cart into a structured literature synthesis grounded only in the selected papers
+
+Current behavior:
+
+- generation is manual
+- requires `2..10` papers in the cart
+- each selected paper is labeled `R1..Rn`
+- each returned claim cites one or more of those `R#` labels
+- HTML ingestion is best-effort and falls back to abstract-only coverage when needed
+
+Why it matters for agents:
+
+- this is the first end-to-end synthesis primitive in the repo
+- it turns a curated reading set into a review artifact with explicit provenance
+- it separates discovery from synthesis while keeping citations auditable
+
+Implementation:
+
+- shared review service: [`lib/reviewService.js`](/Users/amahajan/src/lit-graph/lib/reviewService.js)
+- evidence extraction: [`lib/reviewEvidence.js`](/Users/amahajan/src/lit-graph/lib/reviewEvidence.js)
+- model client: [`lib/anthropicClient.js`](/Users/amahajan/src/lit-graph/lib/anthropicClient.js)
+- UI wiring: [`frontend/src/ui/reviewDraft.js`](/Users/amahajan/src/lit-graph/frontend/src/ui/reviewDraft.js)
+
+Agent framing:
+
+- use this as `generate_review(paper_ids) -> structured_synthesis`
+- the returned artifact is suitable for note generation, downstream editing, or reading-plan derivation
+
+### 11. BibTeX Export
 
 What it does:
 
@@ -286,7 +319,7 @@ Agent framing:
 
 - use this as `export_bibtex(selected_papers, sort)`
 
-### 11. Identity Export
+### 12. Identity Export
 
 What it does:
 
@@ -311,7 +344,7 @@ Agent framing:
 
 - use this as `export_identity_table(selected_papers, sort)`
 
-### 12. Rate-Limited Retrieval Boundary
+### 13. Rate-Limited Retrieval Boundary
 
 What it does:
 
