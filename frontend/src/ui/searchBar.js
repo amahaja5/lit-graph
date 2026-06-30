@@ -7,7 +7,7 @@ export function createSearchBar({ formEl, inputEl, submitBtnEl, statusEl, errorE
     event.preventDefault();
     const value = inputEl.value.trim();
     if (!value) {
-      setError("Enter a Semantic Scholar paper identifier (DOI, ARXIV, or paperId).");
+      setError("Enter a paper identifier (DOI, ARXIV, PMID, NBER, or Semantic Scholar paperId).");
       return;
     }
     clearError();

@@ -33,6 +33,7 @@ Supported inputs today:
 - Semantic Scholar `paperId`
 - `DOI:<doi>`
 - `ARXIV:<id>`
+- `PMID:<id>`
 - `NBER:w12345`
 - `NBER:https://www.nber.org/papers/w12345`
 
@@ -326,6 +327,7 @@ What it does:
 - exports the review cart as a tab-separated text file with:
   - Semantic Scholar URL
   - ArXiv ID
+  - PubMed ID
   - NBER ID
   - paperId
   - title
@@ -495,7 +497,7 @@ type ExpansionCandidate = {
 - current review cart is browser-session state
 - NBER resolution may depend on both NBER page structure and Semantic Scholar title matching
 - BibTeX coverage is partial because `citationStyles` is not guaranteed upstream
-- identifier export is only as good as available `externalIds` and DOI patterns
+- identifier export is only as good as available `externalIds` and namespaced-ID parsing
 
 ## Suggested Next Steps if You Want to Productize This for Agents
 

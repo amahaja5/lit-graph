@@ -6,6 +6,7 @@ export function extractPaperIdentifiers(paper, fallbackNode = {}) {
 
   const externalIds = source.externalIds && typeof source.externalIds === "object" ? source.externalIds : {};
   const arxivId = extractArxivIdentifier(externalIds, paperId);
+  const pmidId = extractPmidIdentifier(externalIds, paperId);
   const nberId = extractNberIdentifier(externalIds, paperId);
 
   return {
@@ -13,6 +14,7 @@ export function extractPaperIdentifiers(paper, fallbackNode = {}) {
     paperId,
     semanticScholarUrl,
     arxivId,
+    pmidId,
     nberId,
   };
 }
@@ -24,13 +26,14 @@ export function buildIdentifiersText(rows, { generatedAt = new Date().toISOStrin
     `# generatedAt=${generatedAt}`,
     `# count=${list.length}`,
     "",
-    "semanticScholarUrl\tarxiv\tnber\tpaperId\ttitle",
+    "semanticScholarUrl\tarxiv\tpmid\tnber\tpaperId\ttitle",
   ];
 
   for (const row of list) {
     lines.push([
       sanitizeField(row.semanticScholarUrl),
       sanitizeField(row.arxivId),
+      sanitizeField(row.pmidId),
       sanitizeField(row.nberId),
       sanitizeField(row.paperId),
       sanitizeField(row.title),
@@ -46,6 +49,16 @@ function extractArxivIdentifier(externalIds, paperId) {
 
   if (paperId.toUpperCase().startsWith("ARXIV:")) {
     return normalizeArxiv(paperId.slice("ARXIV:".length));
+  }
+  return "";
+}
+
+function extractPmidIdentifier(externalIds, paperId) {
+  const explicitPmid = pickExternalId(externalIds, ["PubMed", "pubmed", "PMID", "pmid", "Medline", "medline"]);
+  if (explicitPmid) return normalizePmid(explicitPmid);
+
+  if (paperId.toUpperCase().startsWith("PMID:")) {
+    return normalizePmid(paperId.slice("PMID:".length));
   }
   return "";
 }
@@ -80,6 +93,13 @@ function normalizeArxiv(raw) {
   const value = asNonEmptyString(raw);
   if (!value) return "";
   return value.replace(/^ARXIV:/i, "").trim();
+}
+
+function normalizePmid(raw) {
+  const value = asNonEmptyString(raw);
+  if (!value) return "";
+  const match = value.match(/(\d{4,})/);
+  return match ? match[1] : "";
 }
 
 function normalizeNber(raw) {

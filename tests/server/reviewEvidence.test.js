@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { extractReadableTextFromHtml, resolveReviewSourceUrl } from "../../lib/reviewEvidence.js";
 
-test("resolveReviewSourceUrl prioritizes arXiv, then NBER, then DOI", () => {
+test("resolveReviewSourceUrl prioritizes arXiv, then NBER, then PubMed, then DOI", () => {
   assert.equal(resolveReviewSourceUrl({
     paperId: "abc",
     url: "https://www.semanticscholar.org/paper/abc",
@@ -15,6 +15,18 @@ test("resolveReviewSourceUrl prioritizes arXiv, then NBER, then DOI", () => {
     url: "https://www.semanticscholar.org/paper/def",
     externalIds: {},
   }), "https://www.nber.org/papers/w12345");
+
+  assert.equal(resolveReviewSourceUrl({
+    paperId: "xyz",
+    url: "https://www.semanticscholar.org/paper/xyz",
+    externalIds: { PubMed: "19872477" },
+  }), "https://pubmed.ncbi.nlm.nih.gov/19872477/");
+
+  assert.equal(resolveReviewSourceUrl({
+    paperId: "PMID:31452104",
+    url: "https://www.semanticscholar.org/paper/xyz",
+    externalIds: {},
+  }), "https://pubmed.ncbi.nlm.nih.gov/31452104/");
 
   assert.equal(resolveReviewSourceUrl({
     paperId: "xyz",

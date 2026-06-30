@@ -173,6 +173,24 @@ test("proxy route supports DOI-like IDs with slashes", async (t) => {
   assert.deepEqual(body.queryEcho, { fields: "title" });
 });
 
+test("proxy route supports PMID identifiers without extra resolution", async (t) => {
+  const upstream = createMockUpstream();
+  const upstreamHandle = await listen(upstream.server);
+  const proxyHandle = await buildProxyServer({ upstreamBaseUrl: upstreamHandle.baseUrl });
+
+  t.after(async () => {
+    await proxyHandle.close();
+    await upstreamHandle.close();
+  });
+
+  const encoded = encodeURIComponent("PMID:19872477");
+  const response = await fetch(`${proxyHandle.baseUrl}/api/paper/${encoded}?fields=title`);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.paperId, "PMID:19872477");
+  assert.deepEqual(body.queryEcho, { fields: "title" });
+});
+
 test("proxy resolves NBER working paper id to DOI before S2 fetch", async (t) => {
   const upstream = createMockUpstream();
   const upstreamHandle = await listen(upstream.server);

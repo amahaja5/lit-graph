@@ -31,7 +31,7 @@ The graph stays readable by:
   - deployment: Vercel serverless functions in `/api`
 - Current exports:
   - BibTeX (`.bib`)
-  - identifier text (`.txt`) with Semantic Scholar / ArXiv / NBER identities
+  - identifier text (`.txt`) with Semantic Scholar / ArXiv / PubMed / NBER identities
 - Current synthesis:
   - structured review draft generated from the review cart via Anthropic
 - Current workspace verification:
@@ -47,12 +47,14 @@ Accepted inputs:
 - Semantic Scholar `paperId`
 - `DOI:<doi>`
 - `ARXIV:<id>`
+- `PMID:<id>`
 - `NBER:w12345`
 - `NBER:https://www.nber.org/papers/w12345`
 
 Notes:
 
-- `NBER:` is treated as a namespaced identifier, just like `DOI:` and `ARXIV:`.
+- `PMID:` is passed through directly to Semantic Scholar, the same way `DOI:` and `ARXIV:` are.
+- `NBER:` is treated as a namespaced identifier and resolved server-side before the Semantic Scholar fetch.
 - Bare NBER IDs like `w12345` are not accepted.
 - DOI-like identifiers containing slashes are supported by the proxy route.
 
@@ -220,6 +222,7 @@ The `.txt` export is tab-separated and includes:
 
 - `semanticScholarUrl`
 - `arxiv`
+- `pmid`
 - `nber`
 - `paperId`
 - `title`
@@ -227,6 +230,7 @@ The `.txt` export is tab-separated and includes:
 Identifier rules:
 
 - ArXiv values are taken from `externalIds` when present, or inferred from `ARXIV:` paper IDs
+- PubMed values are taken from `externalIds` when present, or inferred from `PMID:` paper IDs
 - NBER values are taken from `externalIds` when present, or inferred from DOI patterns like `10.3386/w####`
 
 ## Review Draft
@@ -236,6 +240,7 @@ Identifier rules:
 - source gathering priority:
   - ArXiv abstract page
   - NBER paper page
+  - PubMed landing page
   - DOI landing page
   - upstream paper URL
   - Semantic Scholar URL fallback
@@ -399,7 +404,7 @@ swagger.json
 - graphs still get dense after a few manual expansions
 - metadata coverage depends on Semantic Scholar completeness
 - `citationStyles.bibtex` is not available for every paper
-- identifier export depends on `externalIds` and DOI patterns, so some rows will be partial
+- identifier export depends on `externalIds` and namespaced-ID parsing, so some rows will be partial
 - no persistence across refreshes
 
 ## Swagger Reference
