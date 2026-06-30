@@ -17,24 +17,28 @@ test("validateStructuredReview rejects citations outside the supplied reference 
 });
 
 test("Anthropic client parses JSON review payload from a text block", async () => {
+  const requests = [];
   const client = createAnthropicClient({
     apiKey: "test-key",
     model: "claude-test",
-    fetchImpl: async () => createJsonResponse({
-      content: [{
-        type: "text",
-        text: JSON.stringify({
-          corpusOverview: { summary: "Overview", citations: ["R1"] },
-          themes: [{ title: "Theme", summary: "Summary", citations: ["R1"] }],
-          methodsEvidence: [],
-          agreements: [],
-          disagreements: [],
-          gaps: [],
-          suggestedNextReads: [{ suggestion: "Read R1 first", citations: ["R1"] }],
-          evidenceLimitations: [{ limitation: "Only one paper", citations: ["R1"] }],
-        }),
-      }],
-    }),
+    fetchImpl: async (url, options) => {
+      requests.push({ url: String(url), options });
+      return createJsonResponse({
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            corpusOverview: { summary: "Overview", citations: ["R1"] },
+            themes: [{ title: "Theme", summary: "Summary", citations: ["R1"] }],
+            methodsEvidence: [],
+            agreements: [],
+            disagreements: [],
+            gaps: [],
+            suggestedNextReads: [{ suggestion: "Read R1 first", citations: ["R1"] }],
+            evidenceLimitations: [{ limitation: "Only one paper", citations: ["R1"] }],
+          }),
+        }],
+      });
+    },
   });
 
   const result = await client.generateStructuredSynthesis({
@@ -45,6 +49,9 @@ test("Anthropic client parses JSON review payload from a text block", async () =
   assert.equal(result.model, "claude-test");
   assert.equal(result.review.corpusOverview.summary, "Overview");
   assert.equal(result.review.themes.length, 1);
+  assert.equal(requests.length, 1);
+  const payload = JSON.parse(requests[0].options.body);
+  assert.equal("temperature" in payload, false);
 });
 
 function createJsonResponse(payload, { status = 200 } = {}) {
