@@ -1,4 +1,5 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+import { buildYearLayout, hasValidYear, yearToX } from "./yearLayout.js";
 
 const STATE_COLORS = {
   unexplored: "#8b8b8b",
@@ -25,6 +26,7 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
   let height = Math.max(360, svgEl.clientHeight || 360);
   let layoutMode = normalizeLayoutMode(initialLayoutMode);
   let currentYearRange = null;
+  let currentYearLayout = null;
 
   svg.attr("viewBox", `0 0 ${width} ${height}`);
 
@@ -222,34 +224,30 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
   function applyLayoutForces(nodes) {
     const xForce = simulation.force("xpos");
     const yForce = simulation.force("ypos");
-    const validYears = nodes.map((node) => node.year).filter((year) => Number.isInteger(year));
+    const validYears = nodes.map((node) => node.year).filter(hasValidYear);
+    currentYearLayout = buildYearLayout(validYears, width);
+    currentYearRange = currentYearLayout
+      ? { minYear: currentYearLayout.minYear, maxYear: currentYearLayout.maxYear }
+      : null;
 
-    if (layoutMode === LAYOUT_MODE_YEAR && validYears.length > 0) {
-      const minYear = Math.min(...validYears);
-      const maxYear = Math.max(...validYears);
-      currentYearRange = { minYear, maxYear };
-
+    if (layoutMode === LAYOUT_MODE_YEAR && currentYearLayout) {
       xForce
-        .x((node) => (hasValidYear(node?.year) ? yearToX(node?.year, currentYearRange, width) : unknownYearX(node, width)))
+        .x((node) => (hasValidYear(node?.year) ? yearToX(node?.year, currentYearLayout, width) : unknownYearX(node, currentYearLayout, width)))
         .strength(validYears.length === 1 ? CENTERING_X_STRENGTH : 0.6);
       yForce.y((node) => laneY(node, height)).strength(CENTERING_Y_STRENGTH);
-      drawYearGuides(currentYearRange);
+      drawYearGuides(currentYearLayout);
     } else {
-      currentYearRange = validYears.length > 0
-        ? { minYear: Math.min(...validYears), maxYear: Math.max(...validYears) }
-        : null;
-
       xForce.x(width / 2).strength(CENTERING_X_STRENGTH);
       yForce.y(height / 2).strength(CENTERING_Y_STRENGTH);
       clearYearGuides();
     }
   }
 
-  function drawYearGuides(range) {
-    const ticks = buildYearTicks(range.minYear, range.maxYear, 7);
+  function drawYearGuides(layout) {
+    const ticks = layout.tickYears;
     const topY = 18;
     const bottomY = height - 22;
-    const unknownX = Math.max(46, Math.round(width * 0.08));
+    const unknownX = layout.unknownX;
 
     guideLayer
       .selectAll("line.year-guide")
@@ -259,8 +257,8 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
         (update) => update,
         (exit) => exit.remove(),
       )
-      .attr("x1", (year) => yearToX(year, range, width))
-      .attr("x2", (year) => yearToX(year, range, width))
+      .attr("x1", (year) => yearToX(year, layout, width))
+      .attr("x2", (year) => yearToX(year, layout, width))
       .attr("y1", topY)
       .attr("y2", bottomY);
 
@@ -272,7 +270,7 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
         (update) => update,
         (exit) => exit.remove(),
       )
-      .attr("x", (year) => yearToX(year, range, width))
+      .attr("x", (year) => yearToX(year, layout, width))
       .attr("y", 14)
       .text((year) => String(year));
 
@@ -405,23 +403,6 @@ function normalizeLayoutMode(mode) {
   return mode === LAYOUT_MODE_FORCE ? LAYOUT_MODE_FORCE : LAYOUT_MODE_YEAR;
 }
 
-function yearToX(year, range, width) {
-  const sidePad = Math.max(120, Math.min(220, width * 0.16));
-  const leftPad = sidePad;
-  const rightPad = sidePad;
-  const usableWidth = Math.max(1, width - leftPad - rightPad);
-  if (!range || !Number.isInteger(range.minYear) || !Number.isInteger(range.maxYear)) {
-    return width / 2;
-  }
-
-  if (!Number.isInteger(year)) return width / 2;
-  if (range.minYear === range.maxYear) return width / 2;
-
-  const clampedYear = Math.max(range.minYear, Math.min(range.maxYear, year));
-  const ratio = (clampedYear - range.minYear) / (range.maxYear - range.minYear);
-  return leftPad + ratio * usableWidth;
-}
-
 function laneY(node, height) {
   if (!hasValidYear(node?.year)) {
     return unknownYearY(node, height);
@@ -437,13 +418,13 @@ function laneY(node, height) {
   return centerY + laneOffset * spacing;
 }
 
-function unknownYearX(node, width) {
-  const centerX = width / 2;
-  const spread = Math.max(48, Math.min(132, width * 0.09));
+function unknownYearX(node, layout, width) {
+  const baseX = layout?.unknownX ?? width / 2;
+  const spread = Math.max(24, Math.min(60, (layout?.gap ?? width * 0.08) * 0.32));
   const laneCount = 5;
   const laneIndex = Math.abs(hashString(node?.id || "")) % laneCount;
   const laneOffset = laneIndex - (laneCount - 1) / 2;
-  return centerX + laneOffset * (spread / 2.2);
+  return baseX + laneOffset * (spread / 2.2);
 }
 
 function unknownYearY(node, height) {
@@ -453,22 +434,6 @@ function unknownYearY(node, height) {
   const laneOffset = laneIndex - (laneCount - 1) / 2;
   const spacing = 18;
   return topBandCenter + laneOffset * spacing;
-}
-
-function buildYearTicks(minYear, maxYear, maxTicks = 7) {
-  if (!Number.isInteger(minYear) || !Number.isInteger(maxYear)) return [];
-  if (minYear === maxYear) return [minYear];
-
-  const rawTicks = d3.ticks(minYear, maxYear, maxTicks)
-    .map((tick) => Math.round(tick))
-    .filter((tick) => Number.isInteger(tick) && tick >= minYear && tick <= maxYear);
-
-  const set = new Set([minYear, ...rawTicks, maxYear]);
-  return [...set].sort((a, b) => a - b);
-}
-
-function hasValidYear(value) {
-  return Number.isInteger(value) && value > 0;
 }
 
 function hashString(value) {
