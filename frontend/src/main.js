@@ -7,6 +7,10 @@ import {
   sortReviewNodesForBibtex,
 } from "./bibtex.js";
 import { buildIdentifiersText, extractPaperIdentifiers } from "./identifiers.js";
+import {
+  DEFAULT_EXPANSION_PAPERS_PER_SIDE,
+  normalizeExpansionCount,
+} from "./expansionSettings.js";
 import { GraphStore } from "./graphStore.js";
 import { normalizeCitationBatch, normalizeReferenceBatch, toPaperNode } from "./normalize.js";
 import {
@@ -25,8 +29,6 @@ import { createSearchBar } from "./ui/searchBar.js";
 import { createSidecar } from "./ui/sidecar.js";
 import { createReviewCart } from "./ui/reviewCart.js";
 
-const TOP_N_PER_SIDE = 15;
-const ROOT_BOOTSTRAP_TOP_N_PER_SIDE = 18;
 const EXPANSION_LIMIT = 100;
 
 const elements = {
@@ -41,7 +43,9 @@ const elements = {
   graphSummary: document.querySelector("#graph-summary"),
   resetViewBtn: document.querySelector("#reset-view-btn"),
   layoutModeBtn: document.querySelector("#layout-mode-btn"),
+  yearBarsBtn: document.querySelector("#year-bars-btn"),
   expansionModeSelect: document.querySelector("#expansion-mode-select"),
+  expansionCountInput: document.querySelector("#expansion-count-input"),
   layoutHint: document.querySelector("#layout-hint"),
   sidecarEmpty: document.querySelector("#sidecar-empty"),
   sidecarContent: document.querySelector("#sidecar-content"),
@@ -72,6 +76,7 @@ const renderer = createGraphRenderer({
   svgEl: elements.graphSvg,
   onNodeClick: handleNodeClick,
   onNodeHover: (node) => renderer.setHoveredNode(node?.paperId ?? null),
+  initialYearBarsEnabled: true,
 });
 
 const searchBar = createSearchBar({
@@ -127,7 +132,9 @@ let reviewDraftState = createInitialReviewDraftState();
 
 elements.resetViewBtn.addEventListener("click", () => renderer.resetView());
 elements.layoutModeBtn.addEventListener("click", toggleLayoutMode);
+elements.yearBarsBtn.addEventListener("click", toggleYearBars);
 elements.expansionModeSelect.addEventListener("change", handleExpansionModeChange);
+elements.expansionCountInput.addEventListener("change", handleExpansionCountChange);
 window.addEventListener("resize", () => renderApp());
 
 renderApp();
@@ -160,7 +167,7 @@ async function loadSeedPaper(rawPaperId) {
     await expandNode(rootNode.paperId, {
       isBootstrap: true,
       requestId,
-      topNPerSide: ROOT_BOOTSTRAP_TOP_N_PER_SIDE,
+      topNPerSide: getSelectedExpansionCount(),
     });
     if (requestId !== activeSeedRequestId) return;
   } catch (error) {
@@ -243,7 +250,7 @@ async function hydrateNodeDetailsIfNeeded(nodeId) {
   }
 }
 
-async function expandNode(nodeId, { isBootstrap = false, requestId = null, topNPerSide = TOP_N_PER_SIDE } = {}) {
+async function expandNode(nodeId, { isBootstrap = false, requestId = null, topNPerSide = null } = {}) {
   const node = store.getNode(nodeId);
   if (!node) return;
   if (!store.canExpand(nodeId)) {
@@ -274,7 +281,10 @@ async function expandNode(nodeId, { isBootstrap = false, requestId = null, topNP
 
     const citationBatch = normalizeCitationBatch(nodeId, citations);
     const referenceBatch = normalizeReferenceBatch(nodeId, references);
-    const selectionLimit = Math.max(1, Number.isFinite(topNPerSide) ? Math.floor(topNPerSide) : TOP_N_PER_SIDE);
+    const selectionLimit = normalizeExpansionCount(topNPerSide ?? getSelectedExpansionCount(), {
+      fallback: DEFAULT_EXPANSION_PAPERS_PER_SIDE,
+      max: EXPANSION_LIMIT,
+    });
 
     const topCitations = selectCandidatesForMode(citationBatch.candidates, selectionLimit, {
       mode: expansionMode,
@@ -478,13 +488,24 @@ function handleExpansionModeChange() {
   clearError();
 }
 
+function handleExpansionCountChange() {
+  const count = getSelectedExpansionCount();
+  elements.expansionCountInput.value = String(count);
+  setStatus(`Future expansions will keep up to ${count} papers per side.`);
+  clearError();
+}
+
 function updateLayoutControls(nodes) {
   const mode = renderer.getLayoutMode();
   const metadata = renderer.getLayoutMetadata();
   const yearRange = metadata?.yearRange;
+  const barsEnabled = metadata?.yearBarsEnabled !== false;
 
   elements.layoutModeBtn.setAttribute("aria-pressed", String(mode === "year"));
   elements.layoutModeBtn.textContent = mode === "year" ? "Year Layout: On" : "Year Layout: Off";
+  elements.yearBarsBtn.setAttribute("aria-pressed", String(barsEnabled));
+  elements.yearBarsBtn.textContent = barsEnabled ? "Year Bars: On" : "Year Bars: Off";
+  elements.expansionCountInput.value = String(getSelectedExpansionCount());
 
   if (mode === "year") {
     if (yearRange?.minYear != null && yearRange?.maxYear != null) {
@@ -505,6 +526,23 @@ function updateLayoutControls(nodes) {
 function getSelectedExpansionMode() {
   const raw = elements.expansionModeSelect?.value;
   return raw || EXPANSION_MODE_RELEVANCE;
+}
+
+function getSelectedExpansionCount() {
+  return normalizeExpansionCount(elements.expansionCountInput?.value, {
+    fallback: DEFAULT_EXPANSION_PAPERS_PER_SIDE,
+    max: EXPANSION_LIMIT,
+  });
+}
+
+function toggleYearBars() {
+  const nextEnabled = !renderer.getYearBarsEnabled();
+  const changed = renderer.setYearBarsEnabled(nextEnabled);
+  if (!changed) return;
+
+  setStatus(nextEnabled ? "Year bar histogram enabled." : "Year bar histogram hidden.");
+  clearError();
+  renderApp();
 }
 
 function renderNotices(notices) {

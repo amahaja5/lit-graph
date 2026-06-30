@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildYearLayout, hasValidYear, yearToX } from "../../frontend/src/yearLayout.js";
+import { buildYearHistogram, buildYearLayout, hasValidYear, yearToX } from "../../frontend/src/yearLayout.js";
 
 test("buildYearLayout spaces observed years evenly instead of compressing dense recent years", () => {
   const layout = buildYearLayout([1993, 1995, 2000, 2005, 2010, 2015, 2020, 2022, 2026], 1200);
@@ -29,6 +29,23 @@ test("yearToX keeps unknown-year nodes aligned to a dedicated left-side lane", (
   assert.ok(layout);
   assert.ok(layout.unknownX < yearToX(2018, layout, 1000));
   assert.equal(yearToX(null, layout, 1000), layout.unknownX);
+});
+
+test("buildYearHistogram counts papers per year and anchors unknown papers to the left lane", () => {
+  const nodes = [
+    { year: 2020 },
+    { year: 2020 },
+    { year: 2022 },
+    { year: null },
+  ];
+  const layout = buildYearLayout(nodes.map((node) => node.year), 1000);
+  const bars = buildYearHistogram(nodes, layout, 1000);
+
+  assert.equal(bars[0].label, "Unknown");
+  assert.equal(bars[0].x, layout.unknownX);
+  assert.equal(bars[0].count, 1);
+  assert.equal(bars.find((bar) => bar.label === "2020")?.count, 2);
+  assert.equal(bars.find((bar) => bar.label === "2022")?.count, 1);
 });
 
 test("hasValidYear accepts positive integers only", () => {

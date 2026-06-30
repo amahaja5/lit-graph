@@ -1,5 +1,5 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
-import { buildYearLayout, hasValidYear, yearToX } from "./yearLayout.js";
+import { buildYearHistogram, buildYearLayout, hasValidYear, yearToX } from "./yearLayout.js";
 
 const STATE_COLORS = {
   unexplored: "#8b8b8b",
@@ -18,7 +18,13 @@ const COLLIDE_PADDING = 2;
 const CENTERING_X_STRENGTH = 0.18;
 const CENTERING_Y_STRENGTH = 0.14;
 
-export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLayoutMode = LAYOUT_MODE_YEAR } = {}) {
+export function createGraphRenderer({
+  svgEl,
+  onNodeClick,
+  onNodeHover,
+  initialLayoutMode = LAYOUT_MODE_YEAR,
+  initialYearBarsEnabled = true,
+} = {}) {
   if (!svgEl) throw new Error("svgEl is required");
 
   const svg = d3.select(svgEl);
@@ -27,6 +33,7 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
   let layoutMode = normalizeLayoutMode(initialLayoutMode);
   let currentYearRange = null;
   let currentYearLayout = null;
+  let yearBarsEnabled = Boolean(initialYearBarsEnabled);
 
   svg.attr("viewBox", `0 0 ${width} ${height}`);
 
@@ -45,6 +52,7 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
     .attr("fill", "#b9b1a2");
 
   const zoomLayer = svg.append("g").attr("class", "zoom-layer");
+  const barLayer = zoomLayer.append("g").attr("class", "year-bars");
   const guideLayer = zoomLayer.append("g").attr("class", "year-guides");
   const linkLayer = zoomLayer.append("g").attr("class", "links");
   const nodeLayer = zoomLayer.append("g").attr("class", "nodes");
@@ -74,6 +82,15 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
   let currentLinkSelection = linkLayer.selectAll("line.link-line");
 
   simulation.on("tick", () => {
+    if (layoutMode === LAYOUT_MODE_YEAR && currentYearLayout) {
+      for (const node of simulation.nodes()) {
+        if (node?.fx != null) continue;
+        node.x = hasValidYear(node?.year)
+          ? yearToX(node?.year, currentYearLayout, width)
+          : unknownYearX(node, currentYearLayout, width);
+      }
+    }
+
     currentLinkSelection
       .attr("x1", (d) => d.source?.x ?? 0)
       .attr("y1", (d) => d.source?.y ?? 0)
@@ -236,11 +253,53 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
         .strength(validYears.length === 1 ? CENTERING_X_STRENGTH : 0.6);
       yForce.y((node) => laneY(node, height)).strength(CENTERING_Y_STRENGTH);
       drawYearGuides(currentYearLayout);
+      drawYearBars(nodes, currentYearLayout);
     } else {
       xForce.x(width / 2).strength(CENTERING_X_STRENGTH);
       yForce.y(height / 2).strength(CENTERING_Y_STRENGTH);
       clearYearGuides();
+      clearYearBars();
     }
+  }
+
+  function drawYearBars(nodes, layout) {
+    if (!yearBarsEnabled) {
+      clearYearBars();
+      return;
+    }
+
+    const bars = buildYearHistogram(nodes, layout, width);
+    if (!bars.length) {
+      clearYearBars();
+      return;
+    }
+
+    const maxCount = Math.max(...bars.map((bar) => bar.count), 1);
+    const maxBarHeight = Math.max(28, Math.min(72, height * 0.12));
+    const barBaseY = height - 8;
+    const barWidth = Math.max(12, Math.min(48, (layout.gap || width * 0.08) * 0.52));
+
+    const selection = barLayer
+      .selectAll("rect.year-bar")
+      .data(bars, (d) => d.key)
+      .join(
+        (enter) => enter.append("rect").attr("class", "year-bar"),
+        (update) => update,
+        (exit) => exit.remove(),
+      )
+      .attr("x", (d) => d.x - barWidth / 2)
+      .attr("width", barWidth)
+      .attr("rx", 4)
+      .attr("ry", 4)
+      .attr("y", (d) => barBaseY - Math.max(6, (d.count / maxCount) * maxBarHeight))
+      .attr("height", (d) => Math.max(6, (d.count / maxCount) * maxBarHeight))
+      .classed("is-unknown", (d) => d.isUnknown);
+
+    selection
+      .selectAll("title")
+      .data((d) => [d])
+      .join("title")
+      .text((d) => `${d.label}: ${d.count} paper${d.count === 1 ? "" : "s"}`);
   }
 
   function drawYearGuides(layout) {
@@ -305,6 +364,10 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
     guideLayer.selectAll("text.year-guide-label").remove();
   }
 
+  function clearYearBars() {
+    barLayer.selectAll("rect.year-bar").remove();
+  }
+
   function resizeIfNeeded() {
     const nextWidth = Math.max(640, svgEl.clientWidth || 640);
     const nextHeight = Math.max(360, svgEl.clientHeight || 360);
@@ -334,10 +397,23 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
     return layoutMode;
   }
 
+  function setYearBarsEnabled(nextEnabled) {
+    const normalized = Boolean(nextEnabled);
+    if (normalized === yearBarsEnabled) return false;
+    yearBarsEnabled = normalized;
+    applyLayoutForces(simulation.nodes() || []);
+    return true;
+  }
+
+  function getYearBarsEnabled() {
+    return yearBarsEnabled;
+  }
+
   function getLayoutMetadata() {
     return {
       mode: layoutMode,
       yearRange: currentYearRange ? { ...currentYearRange } : null,
+      yearBarsEnabled,
     };
   }
 
@@ -369,6 +445,8 @@ export function createGraphRenderer({ svgEl, onNodeClick, onNodeHover, initialLa
     setHoveredNode,
     setLayoutMode,
     getLayoutMode,
+    setYearBarsEnabled,
+    getYearBarsEnabled,
     getLayoutMetadata,
   };
 }
@@ -419,12 +497,7 @@ function laneY(node, height) {
 }
 
 function unknownYearX(node, layout, width) {
-  const baseX = layout?.unknownX ?? width / 2;
-  const spread = Math.max(24, Math.min(60, (layout?.gap ?? width * 0.08) * 0.32));
-  const laneCount = 5;
-  const laneIndex = Math.abs(hashString(node?.id || "")) % laneCount;
-  const laneOffset = laneIndex - (laneCount - 1) / 2;
-  return baseX + laneOffset * (spread / 2.2);
+  return layout?.unknownX ?? width / 2;
 }
 
 function unknownYearY(node, height) {

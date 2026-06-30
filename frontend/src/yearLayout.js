@@ -77,6 +77,41 @@ export function hasValidYear(value) {
   return Number.isInteger(value) && value > 0;
 }
 
+export function buildYearHistogram(nodes, layout, width) {
+  if (!layout) return [];
+
+  const counts = new Map(layout.knownYears.map((year) => [year, 0]));
+  let unknownCount = 0;
+
+  for (const node of Array.isArray(nodes) ? nodes : []) {
+    if (hasValidYear(node?.year)) {
+      counts.set(node.year, (counts.get(node.year) || 0) + 1);
+    } else {
+      unknownCount += 1;
+    }
+  }
+
+  const bars = layout.knownYears.map((year) => ({
+    key: `year:${year}`,
+    label: String(year),
+    x: yearToX(year, layout, width),
+    count: counts.get(year) || 0,
+    isUnknown: false,
+  }));
+
+  if (unknownCount > 0) {
+    bars.unshift({
+      key: "year:unknown",
+      label: "Unknown",
+      x: layout.unknownX ?? width / 2,
+      count: unknownCount,
+      isUnknown: true,
+    });
+  }
+
+  return bars.filter((bar) => bar.count > 0);
+}
+
 function selectVisibleTickYears(knownYears, maxTickCount) {
   if (knownYears.length <= maxTickCount) return knownYears;
 

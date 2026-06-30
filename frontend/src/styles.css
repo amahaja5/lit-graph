@@ -96,7 +96,8 @@ button.secondary {
   border-color: var(--line);
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="number"] {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -106,6 +107,7 @@ input[type="text"] {
 }
 
 input[type="text"]:focus,
+input[type="number"]:focus,
 button:focus,
 a:focus {
   outline: 2px solid color-mix(in srgb, var(--accent) 55%, white);
@@ -251,6 +253,16 @@ a {
   color: var(--ink);
   padding: 0.25rem 0.4rem;
   min-height: 32px;
+}
+
+.toolbar-number-input {
+  width: 5rem;
+  min-height: 32px;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
 }
 
 .toolbar-select:focus {
@@ -611,6 +623,17 @@ a {
   stroke: rgba(255, 255, 255, 0.75);
   stroke-width: 2px;
   stroke-linejoin: round;
+}
+
+.year-bar {
+  fill: rgba(11, 93, 92, 0.18);
+  stroke: rgba(11, 93, 92, 0.38);
+  stroke-width: 1;
+}
+
+.year-bar.is-unknown {
+  fill: rgba(107, 102, 92, 0.16);
+  stroke: rgba(107, 102, 92, 0.34);
 }
 
 @media (max-width: 980px) {

@@ -36,12 +36,26 @@
             <div class="graph-toolbar-actions">
               <button id="reset-view-btn" type="button">Reset View</button>
               <button id="layout-mode-btn" type="button" class="secondary" aria-pressed="true">Year Layout: On</button>
+              <button id="year-bars-btn" type="button" class="secondary" aria-pressed="true">Year Bars: On</button>
               <label class="toolbar-control" for="expansion-mode-select">
                 Expansion
                 <select id="expansion-mode-select" class="toolbar-select">
                   <option value="relevance">Top relevance</option>
                   <option value="lesser_known_sample">Lesser-known sample</option>
                 </select>
+              </label>
+              <label class="toolbar-control" for="expansion-count-input">
+                Per Side
+                <input
+                  id="expansion-count-input"
+                  class="toolbar-number-input"
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value="15"
+                  inputmode="numeric"
+                />
               </label>
             </div>
             <div class="graph-toolbar-meta">
