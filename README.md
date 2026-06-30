@@ -334,10 +334,10 @@ Notes:
 
 `/Users/amahajan/src/lit-graph/vercel.json` is configured so:
 
-- Vercel serves existing static files and serverless functions first
-- remaining app routes fall back to `frontend/index.html`
+- `/api/*` is handled by Vercel functions
+- all non-API routes fall back to `frontend/index.html`
 
-This filesystem-first fallback prevents module requests like `/src/main.js` or `/src/expansionSettings.js` from being rewritten to HTML.
+The SPA rewrite intentionally excludes `/api/*`; otherwise API requests can be served HTML instead of JSON.
 
 ### Recommended Post-Deploy Checks
 
