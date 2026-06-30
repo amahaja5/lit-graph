@@ -189,6 +189,13 @@ a {
   min-height: calc(100vh - 190px);
 }
 
+.app-footer {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 0.2rem 0 0.6rem;
+}
+
 .graph-panel,
 .panel-card {
   background: color-mix(in srgb, var(--paper) 94%, white);
