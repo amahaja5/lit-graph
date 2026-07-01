@@ -11,6 +11,7 @@ import {
   DEFAULT_EXPANSION_PAPERS_PER_SIDE,
   normalizeExpansionCount,
 } from "./expansionSettings.js";
+import { computeGraphPanelHeight } from "./graphSizing.js";
 import { GraphStore } from "./graphStore.js";
 import { normalizeCitationBatch, normalizeReferenceBatch, toPaperNode } from "./normalize.js";
 import {
@@ -41,6 +42,7 @@ const elements = {
   globalNotices: document.querySelector("#global-notices"),
   hoverTip: document.querySelector("#hover-tip"),
   graphSvg: document.querySelector("#graph-svg"),
+  graphPanel: document.querySelector(".graph-panel"),
   graphEmpty: document.querySelector("#graph-empty"),
   graphSummary: document.querySelector("#graph-summary"),
   resetViewBtn: document.querySelector("#reset-view-btn"),
@@ -457,6 +459,7 @@ function renderApp() {
   const selectedNode = snapshot.selectedNodeId ? store.getNode(snapshot.selectedNodeId) : null;
   const reviewNodes = store.getReviewCartNodes();
 
+  updateGraphPanelHeight(snapshot.nodes.length);
   renderer.render(snapshot);
   updateLayoutControls(snapshot.nodes);
 
@@ -476,6 +479,17 @@ function renderApp() {
     referencesById: buildReviewReferenceIndex(reviewDraftState.payload?.references),
   });
   renderNotices(snapshot.notices);
+}
+
+function updateGraphPanelHeight(nodeCount) {
+  if (!elements.graphPanel) return;
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1280;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 800;
+  const nextHeight = computeGraphPanelHeight(nodeCount, {
+    viewportWidth,
+    viewportHeight,
+  });
+  elements.graphPanel.style.height = `${nextHeight}px`;
 }
 
 function toggleLayoutMode() {
