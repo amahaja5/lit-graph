@@ -62,6 +62,7 @@ function renderObjectList(items, { key, keyLabel = "", onSelectReference } = {})
 }
 
 export function createReviewDraft({
+  rootEl,
   buttonEl,
   badgeEl,
   emptyEl,
@@ -78,11 +79,16 @@ export function createReviewDraft({
   function render({ state, gate, referencesById } = {}) {
     const reviewState = state || {};
     const canGenerate = Boolean(gate?.canGenerate) && reviewState.status !== "loading";
+    const hasPayload = Boolean(reviewState.payload);
+    const isDraftMode = reviewState.status === "loading" || hasPayload;
+    if (rootEl) {
+      rootEl.dataset.reviewMode = isDraftMode ? "draft" : "cart";
+    }
     if (buttonEl) {
       buttonEl.disabled = !canGenerate;
       buttonEl.textContent = reviewState.status === "loading"
         ? "Generating Review..."
-        : reviewState.payload
+        : hasPayload
           ? "Regenerate Review"
           : "Generate Review";
     }
@@ -93,13 +99,15 @@ export function createReviewDraft({
     }
 
     if (statusEl) {
-      statusEl.textContent = reviewState.status === "loading"
+      const statusText = reviewState.status === "loading"
         ? "Generating structured synthesis from the review cart..."
         : reviewState.errorMessage
           ? reviewState.errorMessage
-          : reviewState.payload
+          : hasPayload
             ? `${reviewState.payload.references.length} paper${reviewState.payload.references.length === 1 ? "" : "s"} synthesized via ${reviewState.payload.model}.`
-            : gate?.reason || "Generate a literature synthesis from the current review cart.";
+            : "";
+      statusEl.hidden = !statusText;
+      statusEl.textContent = statusText;
       statusEl.classList.toggle("review-draft-error", Boolean(reviewState.errorMessage));
     }
 
@@ -113,9 +121,9 @@ export function createReviewDraft({
       }
     }
 
-    if (!reviewState.payload) {
+    if (!hasPayload) {
       if (emptyEl) {
-        emptyEl.hidden = false;
+        emptyEl.hidden = reviewState.status === "loading";
         emptyEl.textContent = gate?.reason || "Generate a literature synthesis from the current review cart.";
       }
       if (contentEl) {

@@ -64,6 +64,7 @@ const elements = {
   exportSortSelect: document.querySelector("#export-bibtex-sort"),
   exportBibtexBtn: document.querySelector("#export-bibtex-btn"),
   exportIdentifiersBtn: document.querySelector("#export-identifiers-btn"),
+  reviewSection: document.querySelector("#review-section"),
   reviewDraftBadge: document.querySelector("#review-draft-badge"),
   reviewDraftStatus: document.querySelector("#review-draft-status"),
   reviewDraftWarnings: document.querySelector("#review-draft-warnings"),
@@ -121,6 +122,7 @@ const reviewCart = createReviewCart({
 });
 
 const reviewDraft = createReviewDraft({
+  rootEl: elements.reviewSection,
   buttonEl: elements.generateReviewBtn,
   badgeEl: elements.reviewDraftBadge,
   emptyEl: elements.reviewDraftEmpty,

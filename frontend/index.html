@@ -70,7 +70,7 @@
           </div>
         </section>
 
-        <aside class="side-panel" aria-label="Paper details and review cart">
+        <aside class="side-panel" aria-label="Paper details">
           <section class="panel-card">
             <h2>Paper Details</h2>
             <div id="sidecar-empty" class="muted">Select a node to view metadata.</div>
@@ -88,14 +88,32 @@
             </div>
           </section>
 
-          <section class="panel-card">
-            <div class="panel-header-row">
-              <h2>Review Cart</h2>
-              <span id="review-count" class="badge">0</span>
+        </aside>
+      </main>
+
+      <section id="review-section" class="review-section panel-card" aria-label="Review workspace" data-review-mode="cart">
+        <div class="panel-header-row review-section-header">
+          <div class="review-section-heading">
+            <h2>Review Workspace</h2>
+            <p class="muted">Collect papers, export the cart, and generate a structured literature synthesis grounded only in the selected set.</p>
+          </div>
+          <div class="review-section-badges">
+            <span id="review-count" class="badge">0</span>
+            <span id="review-draft-badge" class="badge" hidden>Stale</span>
+          </div>
+        </div>
+
+        <div class="review-workspace-controls">
+          <div class="review-cart-block">
+            <div class="panel-header-row review-subsection-header">
+              <h3>Review Cart</h3>
             </div>
             <p class="muted">Export selected papers as BibTeX or identifier text.</p>
             <ul id="review-list" class="review-list"></ul>
-            <div class="review-actions">
+          </div>
+
+          <div class="review-control-block">
+            <div class="review-actions review-export-actions">
               <label class="review-sort-control" for="export-bibtex-sort">
                 Sort
                 <select id="export-bibtex-sort" class="toolbar-select" disabled>
@@ -106,21 +124,14 @@
               <button id="export-bibtex-btn" type="button" disabled>Export BibTeX</button>
               <button id="export-identifiers-btn" type="button" disabled>Export IDs (.txt)</button>
             </div>
-          </section>
-        </aside>
-      </main>
+            <div class="review-actions review-generate-actions">
+              <button id="generate-review-btn" type="button" disabled>Generate Review</button>
+            </div>
+            <div id="review-draft-status" class="muted review-draft-status" hidden></div>
+            <div id="review-draft-warnings" class="review-warnings"></div>
+          </div>
+        </div>
 
-      <section class="review-section panel-card" aria-label="Review draft">
-        <div class="panel-header-row">
-          <h2>Review Draft</h2>
-          <span id="review-draft-badge" class="badge" hidden>Stale</span>
-        </div>
-        <p class="muted">Generate a structured literature synthesis grounded only in the review cart.</p>
-        <div class="review-actions">
-          <button id="generate-review-btn" type="button" disabled>Generate Review</button>
-        </div>
-        <div id="review-draft-status" class="muted review-draft-status"></div>
-        <div id="review-draft-warnings" class="review-warnings"></div>
         <div id="review-draft-empty" class="review-empty">Add 2-10 papers to the review cart to generate a review.</div>
         <div id="review-draft-content" class="review-draft" hidden></div>
       </section>
