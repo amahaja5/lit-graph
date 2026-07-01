@@ -32,6 +32,8 @@ import { createSidecar } from "./ui/sidecar.js";
 import { createReviewCart } from "./ui/reviewCart.js";
 
 const EXPANSION_LIMIT = 100;
+const COPYRIGHT_START_YEAR = 2026;
+const $current_year = new Date().getFullYear();
 
 const elements = {
   searchForm: document.querySelector("#search-form"),
@@ -73,6 +75,7 @@ const elements = {
   reviewDraftEmpty: document.querySelector("#review-draft-empty"),
   reviewDraftContent: document.querySelector("#review-draft-content"),
   generateReviewBtn: document.querySelector("#generate-review-btn"),
+  copyrightText: document.querySelector("#copyright-text"),
 };
 
 const store = new GraphStore();
@@ -149,6 +152,7 @@ elements.expansionCountInput.addEventListener("change", handleExpansionCountChan
 window.addEventListener("resize", () => renderApp());
 
 renderApp();
+updateFooterYear();
 searchBar.focus();
 
 async function loadSeedPaper(rawPaperId) {
@@ -490,6 +494,14 @@ function updateGraphPanelHeight(nodeCount) {
     viewportHeight,
   });
   elements.graphPanel.style.height = `${nextHeight}px`;
+}
+
+function updateFooterYear() {
+  if (!elements.copyrightText) return;
+  const yearLabel = $current_year <= COPYRIGHT_START_YEAR
+    ? String(COPYRIGHT_START_YEAR)
+    : `${COPYRIGHT_START_YEAR}-${$current_year}`;
+  elements.copyrightText.textContent = `Copyright ${yearLabel} Avi Mahajan`;
 }
 
 function toggleLayoutMode() {

@@ -136,6 +136,14 @@ a {
   gap: 0.8rem;
 }
 
+.app-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.1rem 0.15rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .topbar {
   display: grid;
   gap: 0.8rem;
