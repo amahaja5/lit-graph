@@ -26,9 +26,10 @@
         </form>
       </header>
 
-      <div id="global-status" class="global-status" aria-live="polite"></div>
-      <div id="global-error" class="global-error" aria-live="assertive"></div>
-      <div id="global-notices" class="global-notices" aria-live="polite"></div>
+      <div id="global-status" class="global-status sr-only live-region" aria-live="polite"></div>
+      <div id="global-error" class="global-error sr-only live-region" aria-live="assertive"></div>
+      <div id="global-notices" class="global-notices sr-only live-region" aria-live="polite"></div>
+      <div id="hover-tip" class="hover-tip" hidden></div>
 
       <main class="layout">
         <section class="graph-panel" aria-label="Graph canvas">

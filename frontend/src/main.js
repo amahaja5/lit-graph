@@ -24,6 +24,7 @@ import {
   selectCandidatesForMode,
 } from "./rank.js";
 import { createGraphRenderer } from "./graphRenderer.js";
+import { createHoverTip } from "./ui/hoverTip.js";
 import { createReviewDraft } from "./ui/reviewDraft.js";
 import { createSearchBar } from "./ui/searchBar.js";
 import { createSidecar } from "./ui/sidecar.js";
@@ -38,6 +39,7 @@ const elements = {
   globalStatus: document.querySelector("#global-status"),
   globalError: document.querySelector("#global-error"),
   globalNotices: document.querySelector("#global-notices"),
+  hoverTip: document.querySelector("#hover-tip"),
   graphSvg: document.querySelector("#graph-svg"),
   graphEmpty: document.querySelector("#graph-empty"),
   graphSummary: document.querySelector("#graph-summary"),
@@ -88,6 +90,10 @@ const searchBar = createSearchBar({
   onSubmit: loadSeedPaper,
 });
 
+const hoverTip = createHoverTip({
+  tipEl: elements.hoverTip,
+});
+
 const sidecar = createSidecar({
   emptyEl: elements.sidecarEmpty,
   contentEl: elements.sidecarContent,
@@ -129,6 +135,7 @@ let activeSeedRequestId = 0;
 const pendingNodeDetailFetches = new Set();
 const completedNodeDetailFetches = new Set();
 let reviewDraftState = createInitialReviewDraftState();
+let lastNoticeKeys = new Set();
 
 elements.resetViewBtn.addEventListener("click", () => renderer.resetView());
 elements.layoutModeBtn.addEventListener("click", toggleLayoutMode);
@@ -547,24 +554,46 @@ function toggleYearBars() {
 
 function renderNotices(notices) {
   elements.globalNotices.replaceChildren();
+  const nextKeys = new Set();
+
   for (const notice of notices) {
-    const div = document.createElement("div");
-    div.className = "notice";
-    div.textContent = notice.message;
-    elements.globalNotices.append(div);
+    const key = `${notice.sourcePaperId || ""}:${notice.kind || ""}:${notice.message || ""}`;
+    nextKeys.add(key);
+
+    const span = document.createElement("span");
+    span.textContent = notice.message;
+    elements.globalNotices.append(span);
+
+    if (!lastNoticeKeys.has(key) && notice.message) {
+      hoverTip.show(notice.message, { tone: "notice", autoHideMs: 3600 });
+    }
   }
+  lastNoticeKeys = nextKeys;
 }
 
 function setStatus(message) {
-  searchBar.setStatus(message || "");
+  const text = String(message || "");
+  searchBar.setStatus(text);
+  if (!text.trim()) {
+    hoverTip.clear({ tone: "status" });
+    return;
+  }
+  hoverTip.show(text, { tone: "status", autoHideMs: inferStatusHideMs(text) });
 }
 
 function setError(message) {
-  searchBar.setError(message || "");
+  const text = String(message || "");
+  searchBar.setError(text);
+  if (!text.trim()) {
+    hoverTip.clear({ tone: "error" });
+    return;
+  }
+  hoverTip.show(text, { tone: "error", autoHideMs: 4200 });
 }
 
 function clearError() {
   searchBar.clearError();
+  hoverTip.clear({ tone: "error" });
 }
 
 function handleReviewReferenceSelect(refId, paperId = null) {
@@ -632,4 +661,15 @@ function buildReviewReferenceIndex(references) {
     index[reference.refId] = reference;
   }
   return index;
+}
+
+function inferStatusHideMs(message) {
+  const text = String(message || "");
+  if (/^(Loading|Bootstrapping|Expanding|Generating|Preparing)\b/i.test(text)) {
+    return 0;
+  }
+  if (/already expanded|already in progress|unavailable|truncated/i.test(text)) {
+    return 3200;
+  }
+  return 2400;
 }
