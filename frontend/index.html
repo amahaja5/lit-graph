@@ -107,23 +107,23 @@
               <button id="export-identifiers-btn" type="button" disabled>Export IDs (.txt)</button>
             </div>
           </section>
-
-          <section class="panel-card">
-            <div class="panel-header-row">
-              <h2>Review Draft</h2>
-              <span id="review-draft-badge" class="badge" hidden>Stale</span>
-            </div>
-            <p class="muted">Generate a structured literature synthesis grounded only in the review cart.</p>
-            <div class="review-actions">
-              <button id="generate-review-btn" type="button" disabled>Generate Review</button>
-            </div>
-            <div id="review-draft-status" class="muted review-draft-status"></div>
-            <div id="review-draft-warnings" class="review-warnings"></div>
-            <div id="review-draft-empty" class="review-empty">Add 2-10 papers to the review cart to generate a review.</div>
-            <div id="review-draft-content" class="review-draft" hidden></div>
-          </section>
         </aside>
       </main>
+
+      <section class="review-section panel-card" aria-label="Review draft">
+        <div class="panel-header-row">
+          <h2>Review Draft</h2>
+          <span id="review-draft-badge" class="badge" hidden>Stale</span>
+        </div>
+        <p class="muted">Generate a structured literature synthesis grounded only in the review cart.</p>
+        <div class="review-actions">
+          <button id="generate-review-btn" type="button" disabled>Generate Review</button>
+        </div>
+        <div id="review-draft-status" class="muted review-draft-status"></div>
+        <div id="review-draft-warnings" class="review-warnings"></div>
+        <div id="review-draft-empty" class="review-empty">Add 2-10 papers to the review cart to generate a review.</div>
+        <div id="review-draft-content" class="review-draft" hidden></div>
+      </section>
     </div>
 
     <script type="module" src="/src/main.js"></script>
