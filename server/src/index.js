@@ -1,3 +1,7 @@
+import { createAuditService } from '../../lib/auditService.js';
+import { getEvidenceJudgments } from '../../lib/setup.js';
+import { requestSignal } from '../../lib/requestSignal.js';
+import { requireAuditAccess } from '../../lib/auditAccess.js';
 import express from "express";
 import fs from "node:fs";
 import path from "node:path";
@@ -26,6 +30,7 @@ export function createApp({
   s2Client,
   paperIdResolver,
   reviewService,
+  auditService,
   serveFrontend = true,
   frontendDir = DEFAULT_FRONTEND_DIR,
   logger = console,
@@ -34,7 +39,18 @@ export function createApp({
   const resolver = paperIdResolver || createPaperIdResolver({ s2Client: client, logger });
   const reviews = reviewService || createDefaultReviewService({ s2Client: client, logger });
   const app = express();
+  const audits = auditService || createAuditService({ judgments: getEvidenceJudgments() });
+  app.use('/api/audit', (req, res, next) => {
+    try { requireAuditAccess(req); next(); } catch (error) { sendError(res, error); }
+  });
+  app.use('/api/audit', express.json({ limit: '4.2mb' }));
   app.use(express.json({ limit: "1mb" }));
+  for (const action of ['status', 'extract', 'check']) {
+    app[action === 'status' ? 'get' : 'post'](`/api/audit/${action}`, async (req, res) => {
+      try { res.setHeader('Cache-Control', 'no-store'); res.json(await audits[action](req.body, { signal: requestSignal(req, res) })); }
+      catch (error) { sendError(res, error); }
+    });
+  }
 
   app.get("/healthz", (_req, res) => {
     res.json({ ok: true });
@@ -82,7 +98,7 @@ export function createApp({
   app.post("/api/review/generate", async (req, res) => {
     try {
       const request = parseReviewGenerateRequestBody(req.body);
-      const payload = await reviews.generateReview(request);
+      const payload = await reviews.generateReview(request, { signal: requestSignal(req, res) });
       res.json(payload);
     } catch (error) {
       logInternalServerError(logger, req, error);
@@ -100,6 +116,7 @@ export function createApp({
 
   app.use((error, req, res, _next) => {
     logInternalServerError(logger, req, error);
+    if (error.type === 'entity.too.large') error = new ProxyHttpError({code:'payload_too_large', status:413, message:'Upload is too large. Maximum manuscript file size is 3 MB.'});
     sendError(res, error);
   });
 
@@ -120,6 +137,7 @@ export function createDefaultReviewService({ s2Client, logger = console } = {}) 
   return createReviewService({
     s2Client: s2Client || createDefaultS2Client({ logger }),
     anthropicClient: createAnthropicClient(),
+    judgments: getEvidenceJudgments(),
     evidenceCache: new TTLCache({ ttlMs: 10 * 60 * 1000 }),
     reviewCache: new TTLCache({ ttlMs: 10 * 60 * 1000 }),
     logger,

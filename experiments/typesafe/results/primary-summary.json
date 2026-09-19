@@ -1,0 +1,1178 @@
+{
+  "summary": {
+    "createdAt": "2026-09-19T18:00:58.828Z",
+    "model": "jev-1.13.0",
+    "repeat": "primary",
+    "dataset": "Synthetic diagnostic fixtures, labeled by the experiment author before API calls; not production or held-out data.",
+    "retrieval": {
+      "n": 8,
+      "baselineRecall1": 0.5,
+      "typesafeRecall1": 0.9375,
+      "baselineRecall8": 0.5,
+      "typesafeRecall8": 1
+    },
+    "html": {
+      "n": 16,
+      "baselineCorrect": 7,
+      "typesafeCorrect": 15,
+      "falseAcceptsBaseline": 8,
+      "falseAcceptsTypesafe": 0,
+      "falseRejectsTypesafe": 1
+    },
+    "relations": {
+      "n": 16,
+      "correct": 16,
+      "errors": []
+    },
+    "requests": 38,
+    "judgments": 111,
+    "inputTokens": 30368,
+    "outputTokens": 2605,
+    "estimatedCostUSD": 0.0012754560000000001,
+    "latencyMs": {
+      "median": 173,
+      "p95": 266,
+      "totalRequestTime": 6968
+    }
+  },
+  "retrievalResults": [
+    {
+      "id": "paraphrase",
+      "baselinePages": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "ranked": [
+        {
+          "page": 10,
+          "text": "Among countryside newborns, deaths fell from 40 to 25 per thousand after the program was introduced.",
+          "score": 2.98,
+          "confidence": 0.98
+        },
+        {
+          "page": 1,
+          "text": "Infant mortality in rural districts is a major policy concern. Whether the intervention reduced it is the question motivating this study.",
+          "score": 1,
+          "confidence": 1
+        },
+        {
+          "page": 7,
+          "text": "The intervention targeted infant mortality in rural districts. No outcome measurements are presented in this introduction.",
+          "score": 0.98,
+          "confidence": 0.98
+        },
+        {
+          "page": 2,
+          "text": "The intervention and infant mortality in rural districts appear in the study title. This section describes the organization of the report.",
+          "score": 0.73,
+          "confidence": 0.72
+        },
+        {
+          "page": 6,
+          "text": "Survey teams recorded the names of rural districts. Infant mortality and intervention status were column headings in the database.",
+          "score": 0.69,
+          "confidence": 0.67
+        },
+        {
+          "page": 3,
+          "text": "Rural districts were selected to examine infant mortality. The intervention was announced in June; this paragraph records administrative dates.",
+          "score": 0.68,
+          "confidence": 0.67
+        },
+        {
+          "page": 5,
+          "text": "A review of intervention studies on infant mortality in rural districts is planned for next year.",
+          "score": 0.67,
+          "confidence": 0.67
+        },
+        {
+          "page": 9,
+          "text": "The questionnaire asked whether participants had heard the terms infant mortality and intervention in rural districts.",
+          "score": 0.41,
+          "confidence": 0.59
+        },
+        {
+          "page": 8,
+          "text": "Permissions for the intervention study of infant mortality in rural districts were obtained in advance.",
+          "score": 0.26,
+          "confidence": 0.74
+        },
+        {
+          "page": 4,
+          "text": "The infant mortality intervention in rural districts was funded by two agencies. We acknowledge their financial contributions.",
+          "score": 0.23,
+          "confidence": 0.77
+        }
+      ],
+      "baselineRecall1": 0,
+      "typesafeRecall1": 1,
+      "baselineRecall8": 0,
+      "typesafeRecall8": 1
+    },
+    {
+      "id": "negation",
+      "baselinePages": [
+        6,
+        7,
+        10,
+        1,
+        2,
+        4,
+        8,
+        3
+      ],
+      "ranked": [
+        {
+          "page": 9,
+          "text": "On held-out distributions, the augmented network scored 71%, compared with 79% for the unmodified baseline. The added module therefore degraded generalization.",
+          "score": 2.99,
+          "confidence": 0.99
+        },
+        {
+          "page": 10,
+          "text": "Adding the adapter improves accuracy on unseen domains is our hypothesis, to be tested in the next section.",
+          "score": 1.01,
+          "confidence": 0.99
+        },
+        {
+          "page": 1,
+          "text": "Accuracy on unseen domains is the outcome used to evaluate adding the adapter. This section defines the metric without reporting results.",
+          "score": 1,
+          "confidence": 0.99
+        },
+        {
+          "page": 6,
+          "text": "A preregistration asked whether adding the adapter improves accuracy on unseen domains; data collection had not begun.",
+          "score": 0.95,
+          "confidence": 0.94
+        },
+        {
+          "page": 8,
+          "text": "Unseen domains were assigned numeric labels before adding the adapter. Accuracy is discussed later.",
+          "score": 0.84,
+          "confidence": 0.8
+        },
+        {
+          "page": 2,
+          "text": "Our literature search used the keywords adapter, accuracy, improves, and unseen domains.",
+          "score": 0.65,
+          "confidence": 0.64
+        },
+        {
+          "page": 4,
+          "text": "The appendix contains configuration names for adding the adapter and testing accuracy on unseen domains.",
+          "score": 0.65,
+          "confidence": 0.64
+        },
+        {
+          "page": 7,
+          "text": "The words adding, adapter, improves, accuracy, and unseen domains occur in the search query used for screening titles.",
+          "score": 0.65,
+          "confidence": 0.65
+        },
+        {
+          "page": 3,
+          "text": "The adapter was implemented in Python. Unseen domains and accuracy measurements were saved to disk.",
+          "score": 0.56,
+          "confidence": 0.53
+        },
+        {
+          "page": 5,
+          "text": "We thank the organizers of the workshop on accuracy and adapters for unseen domains.",
+          "score": 0.17,
+          "confidence": 0.83
+        }
+      ],
+      "baselineRecall1": 0,
+      "typesafeRecall1": 1,
+      "baselineRecall8": 0,
+      "typesafeRecall8": 1
+    },
+    {
+      "id": "numerical_direct",
+      "baselinePages": [
+        8,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "ranked": [
+        {
+          "page": 8,
+          "text": "Model A achieved 95.3 percent validity on the evaluation set.",
+          "score": 3,
+          "confidence": 1
+        },
+        {
+          "page": 9,
+          "text": "The evaluation set contains molecular strings.",
+          "score": 0.99,
+          "confidence": 0.43
+        },
+        {
+          "page": 3,
+          "text": "A validation split was reserved.",
+          "score": 0.85,
+          "confidence": 0.73
+        },
+        {
+          "page": 6,
+          "text": "The data were shuffled.",
+          "score": 0.18,
+          "confidence": 0.82
+        },
+        {
+          "page": 10,
+          "text": "The training schedule lasted ten epochs.",
+          "score": 0.15,
+          "confidence": 0.85
+        },
+        {
+          "page": 5,
+          "text": "The vocabulary contains 70 tokens.",
+          "score": 0.1,
+          "confidence": 0.9
+        },
+        {
+          "page": 7,
+          "text": "We report hardware specifications.",
+          "score": 0.1,
+          "confidence": 0.9
+        },
+        {
+          "page": 4,
+          "text": "All trials ran on one GPU.",
+          "score": 0.08,
+          "confidence": 0.92
+        },
+        {
+          "page": 1,
+          "text": "We used a batch size of 32.",
+          "score": 0.03,
+          "confidence": 0.97
+        },
+        {
+          "page": 2,
+          "text": "The authors released source code.",
+          "score": 0.03,
+          "confidence": 0.97
+        }
+      ],
+      "baselineRecall1": 1,
+      "typesafeRecall1": 1,
+      "baselineRecall8": 1,
+      "typesafeRecall8": 1
+    },
+    {
+      "id": "contradiction_direct",
+      "baselinePages": [
+        7,
+        8,
+        10,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "ranked": [
+        {
+          "page": 7,
+          "text": "The treatment did not increase mean income by 20 percent: mean income fell by 5 percent compared with controls.",
+          "score": 3,
+          "confidence": 1
+        },
+        {
+          "page": 8,
+          "text": "Income was measured annually.",
+          "score": 1.19,
+          "confidence": 0.44
+        },
+        {
+          "page": 3,
+          "text": "Currency amounts were inflation adjusted.",
+          "score": 0.94,
+          "confidence": 0.44
+        },
+        {
+          "page": 2,
+          "text": "Control households received no payment.",
+          "score": 0.78,
+          "confidence": 0.66
+        },
+        {
+          "page": 10,
+          "text": "Treatment assignment was randomized.",
+          "score": 0.62,
+          "confidence": 0.52
+        },
+        {
+          "page": 5,
+          "text": "Attrition is tabulated separately.",
+          "score": 0.3,
+          "confidence": 0.7
+        },
+        {
+          "page": 9,
+          "text": "Respondents consented to participate.",
+          "score": 0.17,
+          "confidence": 0.83
+        },
+        {
+          "page": 6,
+          "text": "Data were anonymized before release.",
+          "score": 0.1,
+          "confidence": 0.9
+        },
+        {
+          "page": 4,
+          "text": "The field team used tablets.",
+          "score": 0.08,
+          "confidence": 0.92
+        },
+        {
+          "page": 1,
+          "text": "The survey had ten questions.",
+          "score": 0,
+          "confidence": 1
+        }
+      ],
+      "baselineRecall1": 1,
+      "typesafeRecall1": 1,
+      "baselineRecall8": 1,
+      "typesafeRecall8": 1
+    },
+    {
+      "id": "scope",
+      "baselinePages": [
+        8,
+        7,
+        9,
+        3,
+        10,
+        1,
+        2,
+        4
+      ],
+      "ranked": [
+        {
+          "page": 6,
+          "text": "English test accuracy reached 92%; Spanish reached 61%. No other languages were evaluated.",
+          "score": 2.95,
+          "confidence": 0.95
+        },
+        {
+          "page": 8,
+          "text": "We discuss what works equally well means for a classifier in every language.",
+          "score": 1.04,
+          "confidence": 0.96
+        },
+        {
+          "page": 9,
+          "text": "Every language has its own classifier vocabulary.",
+          "score": 1.03,
+          "confidence": 0.71
+        },
+        {
+          "page": 7,
+          "text": "The classifier is intended for use in every language.",
+          "score": 1.01,
+          "confidence": 0.82
+        },
+        {
+          "page": 10,
+          "text": "The classifier interface lets users select a language.",
+          "score": 0.7,
+          "confidence": 0.53
+        },
+        {
+          "page": 2,
+          "text": "Language identifiers were saved as strings.",
+          "score": 0.38,
+          "confidence": 0.62
+        },
+        {
+          "page": 3,
+          "text": "Every classifier checkpoint is downloadable.",
+          "score": 0.19,
+          "confidence": 0.81
+        },
+        {
+          "page": 4,
+          "text": "The classifier was trained using a GPU.",
+          "score": 0.15,
+          "confidence": 0.85
+        },
+        {
+          "page": 5,
+          "text": "We acknowledge the language annotation team.",
+          "score": 0.06,
+          "confidence": 0.94
+        },
+        {
+          "page": 1,
+          "text": "Work on the classifier began in January.",
+          "score": 0.02,
+          "confidence": 0.98
+        }
+      ],
+      "baselineRecall1": 0,
+      "typesafeRecall1": 1,
+      "baselineRecall8": 0,
+      "typesafeRecall8": 1
+    },
+    {
+      "id": "two_sided",
+      "baselinePages": [
+        9,
+        1,
+        4,
+        7,
+        10,
+        2,
+        3,
+        8
+      ],
+      "ranked": [
+        {
+          "page": 6,
+          "text": "Among people younger than 25 and older than 54, the policy reduced the fraction holding a job by two percentage points.",
+          "score": 2.97,
+          "confidence": 0.97
+        },
+        {
+          "page": 5,
+          "text": "For workers aged 25–54, the policy increased the fraction holding a job by four percentage points.",
+          "score": 2.12,
+          "confidence": 0.87
+        },
+        {
+          "page": 7,
+          "text": "Employment across all age groups is the focus of the reform proposal.",
+          "score": 1.05,
+          "confidence": 0.82
+        },
+        {
+          "page": 3,
+          "text": "The reform employment dataset covers all age groups.",
+          "score": 0.9,
+          "confidence": 0.84
+        },
+        {
+          "page": 2,
+          "text": "We explain how employment and age groups were recorded for the reform.",
+          "score": 0.79,
+          "confidence": 0.78
+        },
+        {
+          "page": 9,
+          "text": "The reform raised questions about employment across all age groups.",
+          "score": 0.75,
+          "confidence": 0.72
+        },
+        {
+          "page": 1,
+          "text": "The reform timetable applies across all age groups; employment results follow later.",
+          "score": 0.69,
+          "confidence": 0.66
+        },
+        {
+          "page": 10,
+          "text": "The employment reform across all age groups was debated in parliament.",
+          "score": 0.6,
+          "confidence": 0.59
+        },
+        {
+          "page": 4,
+          "text": "The employment reform across all age groups received research funding.",
+          "score": 0.53,
+          "confidence": 0.51
+        },
+        {
+          "page": 8,
+          "text": "The reform employment questionnaire listed all age groups.",
+          "score": 0.45,
+          "confidence": 0.55
+        },
+        {
+          "page": 11,
+          "text": "Employment reform and age groups are the keywords of this report.",
+          "score": 0.33,
+          "confidence": 0.67
+        }
+      ],
+      "baselineRecall1": 0,
+      "typesafeRecall1": 0.5,
+      "baselineRecall8": 0,
+      "typesafeRecall8": 1
+    },
+    {
+      "id": "method_direct",
+      "baselinePages": [
+        4,
+        7,
+        9,
+        1,
+        2,
+        3,
+        5,
+        6
+      ],
+      "ranked": [
+        {
+          "page": 4,
+          "text": "The study used random assignment at the school level: a computer assigned 40 schools to treatment and 40 to control.",
+          "score": 3,
+          "confidence": 1
+        },
+        {
+          "page": 5,
+          "text": "Pupil attendance was measured daily.",
+          "score": 1.05,
+          "confidence": 0
+        },
+        {
+          "page": 10,
+          "text": "Outcomes included examination scores.",
+          "score": 0.24,
+          "confidence": 0.76
+        },
+        {
+          "page": 8,
+          "text": "Teachers completed surveys.",
+          "score": 0.17,
+          "confidence": 0.83
+        },
+        {
+          "page": 6,
+          "text": "Parents received information sheets.",
+          "score": 0.15,
+          "confidence": 0.85
+        },
+        {
+          "page": 9,
+          "text": "The study ran for two years.",
+          "score": 0.13,
+          "confidence": 0.87
+        },
+        {
+          "page": 3,
+          "text": "We thank the participating teachers.",
+          "score": 0.08,
+          "confidence": 0.92
+        },
+        {
+          "page": 2,
+          "text": "Baseline ages ranged from 10 to 12.",
+          "score": 0.06,
+          "confidence": 0.94
+        },
+        {
+          "page": 1,
+          "text": "The data include urban and rural areas.",
+          "score": 0.05,
+          "confidence": 0.95
+        },
+        {
+          "page": 7,
+          "text": "The study protocol was approved.",
+          "score": 0.04,
+          "confidence": 0.96
+        }
+      ],
+      "baselineRecall1": 1,
+      "typesafeRecall1": 1,
+      "baselineRecall8": 1,
+      "typesafeRecall8": 1
+    },
+    {
+      "id": "limitation_direct",
+      "baselinePages": [
+        3,
+        5,
+        6,
+        8,
+        1,
+        2,
+        4,
+        7
+      ],
+      "ranked": [
+        {
+          "page": 3,
+          "text": "This observational analysis of screen time and depression cannot establish causation; unmeasured confounding may explain the association.",
+          "score": 2.87,
+          "confidence": 0.87
+        },
+        {
+          "page": 4,
+          "text": "Participants completed an online survey.",
+          "score": 2.37,
+          "confidence": 0.37
+        },
+        {
+          "page": 5,
+          "text": "Screen time was self-reported.",
+          "score": 1.35,
+          "confidence": 0.45
+        },
+        {
+          "page": 6,
+          "text": "Depression was measured with a questionnaire.",
+          "score": 1.13,
+          "confidence": 0.7
+        },
+        {
+          "page": 7,
+          "text": "Missing values were described.",
+          "score": 1.1,
+          "confidence": 0
+        },
+        {
+          "page": 9,
+          "text": "The sample contained 800 people.",
+          "score": 0.32,
+          "confidence": 0.68
+        },
+        {
+          "page": 8,
+          "text": "The analysis software was version 4.",
+          "score": 0.1,
+          "confidence": 0.9
+        },
+        {
+          "page": 2,
+          "text": "Supplementary tables contain descriptive statistics.",
+          "score": 0.04,
+          "confidence": 0.96
+        },
+        {
+          "page": 10,
+          "text": "The authors declare no conflicts.",
+          "score": 0.02,
+          "confidence": 0.98
+        },
+        {
+          "page": 1,
+          "text": "Survey invitations were sent by email.",
+          "score": 0.01,
+          "confidence": 0.99
+        }
+      ],
+      "baselineRecall1": 1,
+      "typesafeRecall1": 1,
+      "baselineRecall8": 1,
+      "typesafeRecall8": 1
+    }
+  ],
+  "htmlResults": [
+    {
+      "id": "research",
+      "expected": true,
+      "baseline": true,
+      "typesafe": true,
+      "answer": {
+        "type": "choice",
+        "choice": "usable",
+        "confidence": 0.99,
+        "probabilities": {
+          "unusable": 0.01,
+          "usable": 0.99
+        }
+      },
+      "extractedLength": 233
+    },
+    {
+      "id": "abstract",
+      "expected": true,
+      "baseline": true,
+      "typesafe": true,
+      "answer": {
+        "type": "choice",
+        "choice": "usable",
+        "confidence": 0.94,
+        "probabilities": {
+          "unusable": 0.03,
+          "usable": 0.97
+        }
+      },
+      "extractedLength": 230
+    },
+    {
+      "id": "negative_result",
+      "expected": true,
+      "baseline": true,
+      "typesafe": true,
+      "answer": {
+        "type": "choice",
+        "choice": "usable",
+        "confidence": 0.99,
+        "probabilities": {
+          "usable": 0.99,
+          "unusable": 0.01
+        }
+      },
+      "extractedLength": 231
+    },
+    {
+      "id": "methods",
+      "expected": true,
+      "baseline": true,
+      "typesafe": true,
+      "answer": {
+        "type": "choice",
+        "choice": "usable",
+        "confidence": 0.99,
+        "probabilities": {
+          "usable": 0.99,
+          "unusable": 0.01
+        }
+      },
+      "extractedLength": 239
+    },
+    {
+      "id": "limitations",
+      "expected": true,
+      "baseline": true,
+      "typesafe": true,
+      "answer": {
+        "type": "choice",
+        "choice": "usable",
+        "confidence": 0.97,
+        "probabilities": {
+          "unusable": 0.02,
+          "usable": 0.98
+        }
+      },
+      "extractedLength": 249
+    },
+    {
+      "id": "mixed_cookie_research",
+      "expected": true,
+      "baseline": true,
+      "typesafe": true,
+      "answer": {
+        "type": "choice",
+        "choice": "usable",
+        "confidence": 0.98,
+        "probabilities": {
+          "usable": 0.99,
+          "unusable": 0.01
+        }
+      },
+      "extractedLength": 246
+    },
+    {
+      "id": "cookie",
+      "expected": false,
+      "baseline": true,
+      "typesafe": false,
+      "answer": {
+        "type": "choice",
+        "choice": "unusable",
+        "confidence": 1,
+        "probabilities": {
+          "unusable": 1,
+          "usable": 0
+        }
+      },
+      "extractedLength": 252
+    },
+    {
+      "id": "paywall",
+      "expected": false,
+      "baseline": true,
+      "typesafe": false,
+      "answer": {
+        "type": "choice",
+        "choice": "unusable",
+        "confidence": 1,
+        "probabilities": {
+          "usable": 0,
+          "unusable": 1
+        }
+      },
+      "extractedLength": 261
+    },
+    {
+      "id": "captcha",
+      "expected": false,
+      "baseline": true,
+      "typesafe": false,
+      "answer": {
+        "type": "choice",
+        "choice": "unusable",
+        "confidence": 1,
+        "probabilities": {
+          "usable": 0,
+          "unusable": 1
+        }
+      },
+      "extractedLength": 248
+    },
+    {
+      "id": "navigation",
+      "expected": false,
+      "baseline": true,
+      "typesafe": false,
+      "answer": {
+        "type": "choice",
+        "choice": "unusable",
+        "confidence": 1,
+        "probabilities": {
+          "unusable": 1,
+          "usable": 0
+        }
+      },
+      "extractedLength": 253
+    },
+    {
+      "id": "metadata",
+      "expected": false,
+      "baseline": true,
+      "typesafe": false,
+      "answer": {
+        "type": "choice",
+        "choice": "unusable",
+        "confidence": 0.99,
+        "probabilities": {
+          "unusable": 0.99,
+          "usable": 0.01
+        }
+      },
+      "extractedLength": 251
+    },
+    {
+      "id": "references",
+      "expected": false,
+      "baseline": true,
+      "typesafe": false,
+      "answer": {
+        "type": "choice",
+        "choice": "unusable",
+        "confidence": 0.99,
+        "probabilities": {
+          "unusable": 1,
+          "usable": 0
+        }
+      },
+      "extractedLength": 252
+    },
+    {
+      "id": "unrelated_article",
+      "expected": false,
+      "baseline": true,
+      "typesafe": false,
+      "answer": {
+        "type": "choice",
+        "choice": "unusable",
+        "confidence": 1,
+        "probabilities": {
+          "unusable": 1,
+          "usable": 0
+        }
+      },
+      "extractedLength": 258
+    },
+    {
+      "id": "empty",
+      "expected": false,
+      "baseline": false,
+      "typesafe": false,
+      "answer": null,
+      "extractedLength": 0
+    },
+    {
+      "id": "short_result",
+      "expected": true,
+      "baseline": false,
+      "typesafe": false,
+      "answer": null,
+      "extractedLength": 0
+    },
+    {
+      "id": "quoted_claim_on_paywall",
+      "expected": false,
+      "baseline": true,
+      "typesafe": false,
+      "answer": {
+        "type": "choice",
+        "choice": "unusable",
+        "confidence": 0.8,
+        "probabilities": {
+          "usable": 0.1,
+          "unusable": 0.9
+        }
+      },
+      "extractedLength": 250
+    }
+  ],
+  "relationResults": [
+    {
+      "id": "exact",
+      "expected": "supported",
+      "answer": {
+        "type": "choice",
+        "choice": "supported",
+        "confidence": 1,
+        "probabilities": {
+          "partially_supported": 0,
+          "insufficient_evidence": 0,
+          "contradicted": 0,
+          "supported": 1
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "paraphrase",
+      "expected": "supported",
+      "answer": {
+        "type": "choice",
+        "choice": "supported",
+        "confidence": 0.49,
+        "probabilities": {
+          "contradicted": 0,
+          "partially_supported": 0.38,
+          "insufficient_evidence": 0,
+          "supported": 0.62
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "null",
+      "expected": "contradicted",
+      "answer": {
+        "type": "choice",
+        "choice": "contradicted",
+        "confidence": 1,
+        "probabilities": {
+          "insufficient_evidence": 0,
+          "supported": 0,
+          "partially_supported": 0,
+          "contradicted": 1
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "different_number",
+      "expected": "contradicted",
+      "answer": {
+        "type": "choice",
+        "choice": "contradicted",
+        "confidence": 0.98,
+        "probabilities": {
+          "partially_supported": 0,
+          "contradicted": 0.99,
+          "insufficient_evidence": 0.01,
+          "supported": 0
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "subset",
+      "expected": "partially_supported",
+      "answer": {
+        "type": "choice",
+        "choice": "partially_supported",
+        "confidence": 0.95,
+        "probabilities": {
+          "supported": 0,
+          "contradicted": 0,
+          "insufficient_evidence": 0.03,
+          "partially_supported": 0.97
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "unrelated",
+      "expected": "insufficient_evidence",
+      "answer": {
+        "type": "choice",
+        "choice": "insufficient_evidence",
+        "confidence": 1,
+        "probabilities": {
+          "supported": 0,
+          "partially_supported": 0,
+          "insufficient_evidence": 1,
+          "contradicted": 0
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "hypothesis",
+      "expected": "insufficient_evidence",
+      "answer": {
+        "type": "choice",
+        "choice": "insufficient_evidence",
+        "confidence": 0.99,
+        "probabilities": {
+          "insufficient_evidence": 0.99,
+          "contradicted": 0.01,
+          "supported": 0,
+          "partially_supported": 0
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "causal",
+      "expected": "partially_supported",
+      "answer": {
+        "type": "choice",
+        "choice": "partially_supported",
+        "confidence": 0.61,
+        "probabilities": {
+          "partially_supported": 0.71,
+          "supported": 0,
+          "contradicted": 0.18,
+          "insufficient_evidence": 0.11
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "wrong_population",
+      "expected": "insufficient_evidence",
+      "answer": {
+        "type": "choice",
+        "choice": "insufficient_evidence",
+        "confidence": 0.78,
+        "probabilities": {
+          "partially_supported": 0.01,
+          "supported": 0,
+          "contradicted": 0.15,
+          "insufficient_evidence": 0.84
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "relative_absolute",
+      "expected": "contradicted",
+      "answer": {
+        "type": "choice",
+        "choice": "contradicted",
+        "confidence": 0.84,
+        "probabilities": {
+          "contradicted": 0.88,
+          "supported": 0,
+          "insufficient_evidence": 0,
+          "partially_supported": 0.12
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "qualified",
+      "expected": "supported",
+      "answer": {
+        "type": "choice",
+        "choice": "supported",
+        "confidence": 0.81,
+        "probabilities": {
+          "supported": 0.86,
+          "contradicted": 0,
+          "insufficient_evidence": 0,
+          "partially_supported": 0.14
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "missing_outcome",
+      "expected": "insufficient_evidence",
+      "answer": {
+        "type": "choice",
+        "choice": "insufficient_evidence",
+        "confidence": 1,
+        "probabilities": {
+          "contradicted": 0,
+          "partially_supported": 0,
+          "supported": 0,
+          "insufficient_evidence": 1
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "two_claims",
+      "expected": "partially_supported",
+      "answer": {
+        "type": "choice",
+        "choice": "partially_supported",
+        "confidence": 0.94,
+        "probabilities": {
+          "insufficient_evidence": 0.05,
+          "partially_supported": 0.95,
+          "supported": 0,
+          "contradicted": 0
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "negated_quote",
+      "expected": "contradicted",
+      "answer": {
+        "type": "choice",
+        "choice": "contradicted",
+        "confidence": 1,
+        "probabilities": {
+          "partially_supported": 0,
+          "contradicted": 1,
+          "supported": 0,
+          "insufficient_evidence": 0
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "attribution",
+      "expected": "contradicted",
+      "answer": {
+        "type": "choice",
+        "choice": "contradicted",
+        "confidence": 0.99,
+        "probabilities": {
+          "supported": 0,
+          "partially_supported": 0,
+          "contradicted": 1,
+          "insufficient_evidence": 0
+        }
+      },
+      "correct": true
+    },
+    {
+      "id": "rounded",
+      "expected": "supported",
+      "answer": {
+        "type": "choice",
+        "choice": "supported",
+        "confidence": 0.99,
+        "probabilities": {
+          "supported": 0.99,
+          "insufficient_evidence": 0,
+          "contradicted": 0,
+          "partially_supported": 0.01
+        }
+      },
+      "correct": true
+    }
+  ]
+}

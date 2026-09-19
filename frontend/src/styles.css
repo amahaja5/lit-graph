@@ -773,3 +773,67 @@ a {
     scroll-behavior: auto !important;
   }
 }
+
+/* Manuscript citation audit */
+[hidden] { display: none !important; }
+.workspace-nav { display:flex; gap:.35rem; border-bottom:1px solid var(--line); padding-bottom:.7rem; }
+.workspace-nav button { background:transparent; color:var(--muted); border:1px solid transparent; }
+.workspace-nav button[aria-pressed="true"] { background:var(--accent); color:white; }
+.audit-active .layout, .audit-active .review-section { display:none; }
+.audit-workspace { max-width:1200px; width:100%; margin:0 auto; padding:1.5rem 0 3rem; }
+.audit-intro { display:flex; justify-content:space-between; align-items:start; gap:2rem; margin-bottom:1.8rem; }
+.audit-intro h2 { font:2.3rem/1.2 var(--font-display); margin:.5rem 0 .8rem; }
+.audit-intro p { max-width:720px; color:var(--muted); line-height:1.6; }
+.audit-eyebrow { font-size:.72rem; letter-spacing:.17em; font-weight:700; color:var(--accent)!important; }
+.audit-columns { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr); gap:1.5rem; align-items:start; }
+.audit-input { display:grid; gap:.75rem; padding:1.5rem; }
+.audit-input label,.audit-reference label { font-size:.85rem; font-weight:600; }
+.audit-input input,.audit-input textarea,.audit-input select,.audit-reference input { width:100%; padding:.75rem; border:1px solid var(--line); border-radius:6px; background:var(--paper); color:var(--ink); font:inherit; }
+.audit-input textarea { resize:vertical; line-height:1.5; }
+.audit-input input[type="file"] { background:transparent; padding:.7rem; }
+.audit-guide { padding:1.5rem; background:#eaf0e9; }
+.audit-guide ol { padding-left:1.2rem; margin:1.3rem 0; }
+.audit-guide li { margin-bottom:1.25rem; line-height:1.65; }
+.audit-guide strong { display:block; }
+.audit-scope { border-top:1px solid var(--line); padding-top:1.2rem; font-size:.88rem; line-height:1.65; }
+.audit-actions { display:flex; flex-wrap:wrap; gap:.6rem; }
+.audit-settings { padding-top:.5rem; }
+.audit-settings[open] { display:grid; gap:.6rem; }
+.audit-settings input { margin:.7rem 0; }
+.audit-disclosure { font-size:.78rem; line-height:1.6; margin-top:.4rem; }
+.audit-status { margin:1.4rem 0; line-height:1.6; }
+.audit-error { color:var(--danger); }
+.audit-setup { border:1px solid #d4b26b; background:#fff2d5; border-radius:8px; padding:1rem; margin-bottom:1.3rem; line-height:1.6; }
+.audit-section-heading { display:flex; justify-content:space-between; align-items:start; gap:1rem; margin:1.6rem 0; }
+.audit-section-heading p { margin-top:.5rem; max-width:720px; line-height:1.6; }
+.audit-inventory-wrap { border:1px solid var(--line); background:var(--paper); border-radius:8px; padding:1rem; }
+.audit-reference { padding:1rem 0; border-bottom:1px solid var(--line); }
+.audit-reference p { margin:.8rem 0; line-height:1.6; }
+.audit-reference label { display:inline-block; width:32%; padding-right:.6rem; }
+.audit-reference input { display:block; margin-top:.5rem; }
+.audit-results { display:grid; gap:1.1rem; }
+.audit-claim { border:1px solid var(--line); border-radius:10px; background:var(--paper); padding:1.5rem; overflow-wrap:anywhere; }
+.audit-claim-heading { display:flex; justify-content:space-between; align-items:center; gap:1rem; }
+.audit-badge { display:inline-block; padding:.4rem .65rem; border-radius:999px; background:#e9e5dc; font-size:.78rem; white-space:nowrap; }
+.audit-badge.supported { background:#dcece2; color:#205737; }
+.audit-badge.partially_supported { background:#fff0c9; color:#755009; }
+.audit-badge.contradicted { background:#fce1dc; color:#982f21; }
+.audit-claim blockquote { margin:1rem 0; padding:.4rem 0 .4rem 1rem; border-left:3px solid var(--line); font:1.05rem/1.65 var(--font-display); white-space:pre-wrap; }
+.audit-claim p { line-height:1.65; margin:.8rem 0; }
+.audit-evidence { border-top:1px solid var(--line); margin-top:1rem; padding-top:1rem; }
+.audit-revision { background:#f3f1ea; padding:1rem; border-radius:6px; }
+.audit-workspace summary { cursor:pointer; line-height:1.6; }
+.audit-workspace input:focus-visible,.audit-workspace textarea:focus-visible,.audit-workspace select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media(max-width:760px) {
+  .audit-columns { grid-template-columns:1fr; }
+  .audit-intro,.audit-section-heading { flex-direction:column; }
+  .audit-intro h2 { font-size:1.8rem; }
+  .audit-reference label { width:100%; margin-top:.7rem; }
+  .audit-claim { padding:1rem; }
+}
+
+.audit-mapping { margin:1rem 0; font-size:.88rem; }
+.audit-mapping textarea { display:block; width:100%; font:inherit; line-height:1.6; padding:.7rem; margin:.6rem 0; border:1px solid var(--line); border-radius:6px; background:var(--paper); }
+.audit-source-choice { display:flex; align-items:start; gap:.6rem; margin:.6rem 0; }
+.audit-source-choice input { margin-top:.25rem; }
+.audit-active .search-form { display:none; }

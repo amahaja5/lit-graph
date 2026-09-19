@@ -31,6 +31,57 @@
       <div id="global-notices" class="global-notices sr-only live-region" aria-live="polite"></div>
       <div id="hover-tip" class="hover-tip" hidden></div>
 
+      <nav class="workspace-nav" aria-label="Workspace">
+        <button type="button" data-workspace="explore" aria-pressed="true">Explore literature</button>
+        <button type="button" data-workspace="audit" aria-pressed="false">Check a manuscript</button>
+      </nav>
+
+      <section id="manuscript-audit" class="audit-workspace" aria-labelledby="audit-title" hidden>
+        <div class="audit-intro">
+          <div><p class="audit-eyebrow">CITATION AUDIT</p><h2 id="audit-title">Do the sources support the claim?</h2>
+          <p>Expand a manuscript’s citations, read the source evidence, and find claims that need a closer look.</p></div>
+          <span id="audit-connection" class="audit-badge">Checking connection</span>
+        </div>
+        <div id="audit-setup" class="audit-setup" hidden></div>
+        <div class="audit-columns">
+          <section class="audit-input panel-card" aria-labelledby="audit-input-title">
+            <h3 id="audit-input-title">1. Add your manuscript</h3>
+            <p class="muted">Include the bibliography. Up to 100,000 characters or a 3 MB file.</p>
+            <label for="audit-arxiv">Load an arXiv paper</label>
+            <input id="audit-arxiv" type="text" placeholder="https://arxiv.org/abs/2605.06322v2" autocomplete="off" />
+            <label for="audit-file">Or upload PDF, Word, or text</label>
+            <input id="audit-file" type="file" accept=".pdf,.docx,.txt,.md" />
+            <label for="audit-text">Or paste manuscript text</label>
+            <textarea id="audit-text" rows="12" maxlength="100000" placeholder="Paste the manuscript, including in-text citations and references…"></textarea>
+            <label for="audit-collection">Find cited sources in Zotero</label>
+            <select id="audit-collection"><option value="">Search the whole library</option></select>
+            <p class="muted">Sources can be outside the manuscript’s own collection. Public arXiv PDFs are a fallback.</p>
+            <div class="audit-actions"><button id="audit-extract" type="button">Extract citations</button><button id="audit-example" class="secondary" type="button">Load example</button></div>
+            <details class="audit-settings"><summary>Connection settings</summary>
+              <label for="audit-token">Access token for a hosted app</label><input id="audit-token" type="password" autocomplete="off" placeholder="Only required for remote access" />
+              <button id="audit-connect" type="button" class="secondary">Refresh connection</button>
+            </details>
+            <p class="muted audit-disclosure">Manuscript text and source excerpts are sent to Anthropic when you run these steps. When semantic evidence ranking is configured (including shadow evaluation), claims and candidate source excerpts are also sent to TypeSafe. Results stay in this browser session unless downloaded.</p>
+          </section>
+          <section class="audit-guide panel-card">
+            <h3>Evidence you can inspect</h3>
+            <ol><li><strong>Review the citation inventory.</strong> Check that passages resolve to the right bibliography entries and versions.</li>
+            <li><strong>Check the cited claims.</strong> See each source’s support and the combined assessment for citations grouped together.</li>
+            <li><strong>Follow the evidence.</strong> Open quoted passages, inspect PDF pages, and export the findings.</li></ol>
+            <p class="audit-scope">Missing full text stays unverified. This checks support in retrieved passages; it does not independently validate experiments or certify printed page numbers.</p>
+          </section>
+        </div>
+        <p id="audit-status" class="audit-status" role="status" aria-live="polite">Add a manuscript to begin.</p>
+        <section id="audit-review" hidden>
+          <div class="audit-section-heading"><div><h3>2. Review and check</h3><p id="audit-inventory-note" class="muted"></p></div>
+            <div class="audit-actions"><button id="audit-run" type="button">Check cited claims</button><button id="audit-stop" type="button" class="secondary" hidden>Stop</button></div></div>
+          <details class="audit-inventory-wrap"><summary>Bibliography and source matching</summary><div id="audit-inventory"></div><button id="audit-add-reference" class="secondary" type="button">Add missing reference</button></details>
+          <div class="audit-section-heading"><p id="audit-summary" class="muted"></p><div class="audit-actions"><button id="audit-add-passage" type="button" class="secondary">Add missing passage</button>
+            <button id="audit-download" type="button" class="secondary">Download report</button><button id="audit-download-json" type="button" class="secondary">Download evidence JSON</button></div></div>
+          <div id="audit-results" class="audit-results"></div>
+        </section>
+      </section>
+
       <main class="layout">
         <section class="graph-panel" aria-label="Graph canvas">
           <div class="graph-toolbar">
@@ -129,6 +180,7 @@
             </div>
             <div id="review-draft-status" class="muted review-draft-status" hidden></div>
             <div id="review-draft-warnings" class="review-warnings"></div>
+            <p class="muted">Review evidence is sent to Anthropic. When HTML quality checks are configured, candidate HTML text is also sent to TypeSafe, including during shadow evaluation.</p>
           </div>
         </div>
 
@@ -142,5 +194,6 @@
     </div>
 
     <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/ui/manuscriptAudit.js"></script>
   </body>
 </html>

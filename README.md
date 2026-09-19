@@ -262,7 +262,7 @@ Identifier rules:
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 22.13+ (required by PDF.js)
 - npm 10+
 
 ### Install
@@ -414,3 +414,52 @@ swagger.json
 ## Additional Docs
 
 [`FEATURES.md`](/Users/amahajan/src/lit-graph/FEATURES.md) maps the implemented LitGraph capabilities into agent-friendly features and integration patterns for paper-reading systems.
+
+## Optional TypeSafe evidence checks
+
+TypeSafe can judge which HTML text is useful scholarly evidence and rank PDF excerpts by their relevance to a manuscript claim. Anthropic still generates reviews and audit assessments. Source identity, exact quotations, and PDF page validation remain deterministic.
+
+Set these server environment variables (locally in `.env` or the launching shell; on Vercel in project settings):
+
+```env
+TYPESAFE_API_KEY=your_key
+TYPESAFE_MODEL=jev-1.13.0
+TYPESAFE_REVIEW_MODE=shadow
+TYPESAFE_AUDIT_MODE=shadow
+TYPESAFE_REVIEW_MIN_CONFIDENCE=0.9
+```
+
+Both modes default to `off`. `shadow` runs judgments and records diagnostics while retaining the existing selected evidence; `on` applies the judgments. Use `on` for an explicit pilot after reviewing shadow results. Restart the server after changing configuration. The 0.9 HTML confidence threshold is a provisional conservative default, **not calibrated on a representative manuscript corpus**. Small synthetic experiments motivated this integration; real-document evaluation remains necessary before broad rollout.
+
+In review `on` mode, a standard HTML parser retains multiple content regions and short passages, then TypeSafe selects useful text blocks. Rejected or uncertain blocks are omitted. Missing credentials or service failure falls back to available abstracts with a warning. In audit `on` mode, TypeSafe scores supporting and contradicting evidence alike; failure uses the original keyword selector with a warning. Audit source matching, quotation validation, and combined-source assessment are unchanged in responsibility.
+
+Requests use a pinned model, typed response validation, bounded retries, at most two concurrent calls per shared client, and a ten-second TypeSafe budget starting at the first judgment in each operation. API judgments are cached in memory for five minutes, up to 128 entries. HTML fetches are capped at 2 MB; candidate extraction at 80 blocks / 80,000 characters. Large PDFs use at most 96 candidates combining lexical matches and page coverage, with a coverage warning; this shortlist does not guarantee complete retrieval. Model/rubric/configuration changes invalidate relevant cache keys. Transient HTML failures are not cached as successful evidence or reviews.
+
+Enabling either `shadow` or `on` sends candidate source text and relevant paper metadata/claims to TypeSafe. Keys stay on the server. Review reference `quality` and audit source `selection` fields expose model/rubric versions, scores, selection status, and request usage; audit JSON exports retain these fields and Markdown includes selection/fallback notices. `/api/audit/status` reports TypeSafe readiness separately from Anthropic readiness. Scores are judgments, not guarantees of correctness. Client disconnects cancel pending TypeSafe calls; an already dispatched Anthropic request may still finish.
+
+See [experiment findings](experiments/typesafe/REPORT.md) and the [workflow plan](experiments/typesafe/WORKFLOW_PLAN.md). Run the explicit synthetic live smoke check with `node experiments/typesafe/production-smoke.mjs` after exporting the key. The normal test suite uses mocked TypeSafe responses and does not spend API credits.
+
+## Manuscript citation audit
+
+Choose **Check a manuscript** in the workspace navigation. Load an arXiv URL/identifier, upload a PDF, DOCX, TXT, or Markdown file (up to 3 MB), or paste up to 100,000 characters including the bibliography. The app extracts citation-bearing passages and reference mappings, lets you review/edit source titles, identifiers, passages, and citation mappings (including adding missed entries), and checks the cited claims against retrieved PDFs. A passage can cite up to eight sources. Larger jobs must be divided into sections with their bibliography (80 references / 150 passages per inventory).
+
+Each passage receives per-source findings and a combined assessment: supported, partially supported, contradicted, or insufficient evidence. Positive/negative support findings require an exact quoted passage anchored to a retrieved PDF page. The report preserves source SHA-256, retrieval route, version, Zotero keys, and reviewed PDF page indices. These are **AI-assisted support assessments**, not a certification of printed pagination or experimental validity. Retrieval selects relevant excerpts rather than assessing every page; missing evidence stays unverified. Inventory extraction may miss citations and should be reviewed. Source PDFs without readable text need OCR outside this web workflow.
+
+The audit runs one passage at a time. Stop retains completed findings; Resume retries failed/unprocessed passages. Download Markdown or JSON, including pending/failed entries. Editing manuscript text invalidates the inventory; changing a source or collection invalidates results. State lives in memory and is lost on refresh. Uploaded manuscripts and selected source excerpts are sent to Anthropic only when the user initiates extraction/checking; originals are not modified or written into Zotero. The web workflow exports findings and suggested revisions, not an automatically rewritten manuscript.
+
+### Audit configuration
+
+- `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`: required for extraction and assessment, reused from review generation. Without them the UI shows setup instructions and disables those actions.
+- Local: `ZOTERO_MODE=local` (default outside Vercel). Keep Zotero running with its local API enabled. The backend reads `http://127.0.0.1:23119/api`, resolves PDF paths through Zotero's file endpoint, and extracts text without editing files. Choose the collection containing the **cited sources**, or search the whole library. This uses the same library as the desktop MCP skill, but is a separate backend API adapter.
+- Hosted: `ZOTERO_MODE=web`, `ZOTERO_API_KEY`, and `ZOTERO_USER_ID` (or `ZOTERO_GROUP_ID`). Use a read-only key with the needed library/file permissions. Stored PDFs must be available through Zotero storage; WebDAV-only or unsynced files may be unavailable.
+- `AUDIT_ACCESS_TOKEN`: required for any remote/Vercel access to audit endpoints. Enter it in the app's connection settings. Keep it and provider keys out of client code. This personal/shared-token workflow is not multi-user account isolation. Local unauthenticated access requires a loopback peer, a localhost Host header, and same-origin requests.
+
+Public arXiv PDFs are a fallback when a modern arXiv identifier is available. The server does not fetch arbitrary bibliography URLs. DOI-only references unavailable in Zotero remain unresolved; it does not infer a source from a loosely similar title. Explicit arXiv versions must match the retrieved PDF text. Native PDF extraction uses PDF.js; DOCX text extraction uses Mammoth. The desktop citation-verifier skill remains the workflow for OCR/visual printed-page checks and corrected Word copies.
+
+API endpoints (shared Express and Vercel implementation):
+
+- `GET /api/audit/status`: model configuration status and Zotero collections.
+- `POST /api/audit/extract`: `{text}`, `{arxiv}`, or `{file:{name,base64}}`; returns manuscript hash and citation inventory.
+- `POST /api/audit/check`: `{claim,references,collectionKey}`; returns one passage's source evidence and combined finding.
+
+PDF/DOCX parsing, source retrieval, and model calls run on the server. No manuscript persistence is introduced; source text is cached in memory for five minutes (up to 30 references). Keep deployment behind the access token and configure function duration/memory for PDF parsing. Vercel's handler declares a 300-second maximum; effective limits depend on the deployment plan. Stop prevents subsequent passages; an already-dispatched provider call may still finish on the server.

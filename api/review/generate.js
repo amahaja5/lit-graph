@@ -1,6 +1,7 @@
 import { sendError } from "../../lib/errors.js";
 import { parseReviewGenerateRequestBody } from "../../lib/reviewRequest.js";
 import { getReviewService } from "../../lib/setup.js";
+import { requestSignal } from '../../lib/requestSignal.js';
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -10,7 +11,7 @@ export default async function handler(req, res) {
 
   try {
     const request = parseReviewGenerateRequestBody(req.body);
-    const payload = await getReviewService().generateReview(request);
+    const payload = await getReviewService().generateReview(request, { signal: requestSignal(req, res) });
     res.json(payload);
   } catch (error) {
     sendError(res, error);

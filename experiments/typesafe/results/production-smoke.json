@@ -1,0 +1,253 @@
+{
+  "createdAt": "2026-09-19T18:31:42.622Z",
+  "html": {
+    "coverage": "html_plus_abstract",
+    "quality": {
+      "mode": "on",
+      "status": "evaluated",
+      "rubricVersion": "evidence-v1",
+      "scores": [
+        {
+          "id": "H1",
+          "type": "choice",
+          "choice": "unusable",
+          "confidence": 1,
+          "probabilities": {
+            "unusable": 1,
+            "usable": 0
+          }
+        },
+        {
+          "id": "H2",
+          "type": "choice",
+          "choice": "unusable",
+          "confidence": 1,
+          "probabilities": {
+            "unusable": 1,
+            "usable": 0
+          }
+        },
+        {
+          "id": "H3",
+          "type": "choice",
+          "choice": "usable",
+          "confidence": 0.99,
+          "probabilities": {
+            "unusable": 0.01,
+            "usable": 0.99
+          }
+        }
+      ],
+      "models": [
+        "jev-1.13.0"
+      ],
+      "requests": 1,
+      "inputTokens": 839,
+      "elapsedMs": 417,
+      "selectedIds": [
+        "H3"
+      ],
+      "candidateCount": 3,
+      "truncated": false
+    }
+  },
+  "audit": {
+    "firstPage": 10,
+    "selection": {
+      "mode": "on",
+      "status": "evaluated",
+      "rubricVersion": "evidence-v1",
+      "scores": [
+        {
+          "id": "P1",
+          "type": "score",
+          "score": 1,
+          "confidence": 1,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0,
+            "1": 1,
+            "2": 0,
+            "3": 0
+          }
+        },
+        {
+          "id": "P2",
+          "type": "score",
+          "score": 1,
+          "confidence": 1,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0,
+            "1": 1,
+            "2": 0,
+            "3": 0
+          }
+        },
+        {
+          "id": "P3",
+          "type": "score",
+          "score": 0.53,
+          "confidence": 0.53,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0.47,
+            "1": 0.53,
+            "2": 0,
+            "3": 0
+          }
+        },
+        {
+          "id": "P4",
+          "type": "score",
+          "score": 0.54,
+          "confidence": 0.5,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0.48,
+            "1": 0.5,
+            "2": 0.02,
+            "3": 0
+          }
+        },
+        {
+          "id": "P5",
+          "type": "score",
+          "score": 0.6,
+          "confidence": 0.59,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0.41,
+            "1": 0.59,
+            "2": 0,
+            "3": 0
+          }
+        },
+        {
+          "id": "P6",
+          "type": "score",
+          "score": 0.03,
+          "confidence": 0.97,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0.97,
+            "1": 0.03,
+            "2": 0,
+            "3": 0
+          }
+        },
+        {
+          "id": "P7",
+          "type": "score",
+          "score": 0.97,
+          "confidence": 0.96,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0.03,
+            "1": 0.97,
+            "2": 0,
+            "3": 0
+          }
+        },
+        {
+          "id": "P8",
+          "type": "score",
+          "score": 0.64,
+          "confidence": 0.62,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0.37,
+            "1": 0.63,
+            "2": 0,
+            "3": 0
+          }
+        },
+        {
+          "id": "P9",
+          "type": "score",
+          "score": 0.98,
+          "confidence": 0.91,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0.06,
+            "1": 0.91,
+            "2": 0.03,
+            "3": 0
+          }
+        },
+        {
+          "id": "P10",
+          "type": "score",
+          "score": 3,
+          "confidence": 1,
+          "legend": {
+            "0": "Unrelated or administrative text with no evidence about the claim.",
+            "1": "Related topic, motivation, hypothesis, or metric definition without findings assessing the claim.",
+            "2": "Evidence addressing part of the claim or an important limitation, without resolving the whole claim.",
+            "3": "Direct evidence establishing or refuting the claim, including numerical results or scope restrictions."
+          },
+          "probabilities": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 1
+          }
+        }
+      ],
+      "models": [
+        "jev-1.13.0"
+      ],
+      "requests": 1,
+      "inputTokens": 2241,
+      "elapsedMs": 350,
+      "candidateCount": 10,
+      "scoredCount": 10,
+      "truncated": false
+    }
+  }
+}
