@@ -451,7 +451,7 @@ The audit runs one passage at a time. Stop retains completed findings; Resume re
 
 - `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`: required for extraction and assessment, reused from review generation. Without them the UI shows setup instructions and disables those actions.
 - Local: `ZOTERO_MODE=local` (default outside Vercel). Keep Zotero running with its local API enabled. The backend reads `http://127.0.0.1:23119/api`, resolves PDF paths through Zotero's file endpoint, and extracts text without editing files. Choose the collection containing the **cited sources**, or search the whole library. This uses the same library as the desktop MCP skill, but is a separate backend API adapter.
-- Hosted: `ZOTERO_MODE=web`, `ZOTERO_API_KEY`, and `ZOTERO_USER_ID` (or `ZOTERO_GROUP_ID`). Use a read-only key with the needed library/file permissions. Stored PDFs must be available through Zotero storage; WebDAV-only or unsynced files may be unavailable.
+- Hosted: `ZOTERO_MODE=oauth`; users click **Connect Zotero** and authorize access on Zotero's website. No manually supplied `ZOTERO_API_KEY` or `ZOTERO_USER_ID` is used. OAuth currently connects personal libraries; the optional `ZOTERO_GROUP_ID` applies to local desktop mode. Stored PDFs must be available through Zotero storage; WebDAV-only or unsynced files may be unavailable.
 - `AUDIT_ACCESS_TOKEN`: required for any remote/Vercel access to audit endpoints. Enter it in the app's connection settings. Keep it and provider keys out of client code. This personal/shared-token workflow is not multi-user account isolation. Local unauthenticated access requires a loopback peer, a localhost Host header, and same-origin requests.
 
 Public arXiv PDFs are a fallback when a modern arXiv identifier is available. The server does not fetch arbitrary bibliography URLs. DOI-only references unavailable in Zotero remain unresolved; it does not infer a source from a loosely similar title. Explicit arXiv versions must match the retrieved PDF text. Native PDF extraction uses PDF.js; DOCX text extraction uses Mammoth. The desktop citation-verifier skill remains the workflow for OCR/visual printed-page checks and corrected Word copies.
@@ -462,4 +462,37 @@ API endpoints (shared Express and Vercel implementation):
 - `POST /api/audit/extract`: `{text}`, `{arxiv}`, or `{file:{name,base64}}`; returns manuscript hash and citation inventory.
 - `POST /api/audit/check`: `{claim,references,collectionKey}`; returns one passage's source evidence and combined finding.
 
-PDF/DOCX parsing, source retrieval, and model calls run on the server. No manuscript persistence is introduced; source text is cached in memory for five minutes (up to 30 references). Keep deployment behind the access token and configure function duration/memory for PDF parsing. Vercel's handler declares a 300-second maximum; effective limits depend on the deployment plan. Stop prevents subsequent passages; an already-dispatched provider call may still finish on the server.
+PDF/DOCX parsing, source retrieval, and model calls run on the server. No manuscript persistence is introduced; source caches are now request-scoped so separate Zotero connections never share retrieved private content. Keep deployment behind the access token and configure function duration/memory for PDF parsing. Vercel's handler declares a 300-second maximum; effective limits depend on the deployment plan. Stop prevents subsequent passages; an already-dispatched provider call may still finish on the server.
+
+### Zotero OAuth setup
+
+Register a browser application at [Zotero OAuth apps](https://www.zotero.org/oauth/apps). For the production domain, set the callback URL to `https://lit-graph.avijmahajan.com/api/zotero/callback`. Set these server environment variables in Vercel's Production environment:
+
+```env
+ZOTERO_MODE=oauth
+ZOTERO_OAUTH_ORIGIN=https://lit-graph.avijmahajan.com
+ZOTERO_CLIENT_KEY=<registered app client key>
+ZOTERO_CLIENT_SECRET=<registered app client secret>
+ZOTERO_SESSION_SECRET=<64-character random hex string>
+```
+
+Generate the session secret locally with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Keep the same secret across serverless instances and redeployments. Set the client secret and session secret as sensitive environment variables. Do not put credentials in frontend environment variables, source files, screenshots, or logs. Keep `AUDIT_ACCESS_TOKEN`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_MODEL`; Zotero authorization does not replace the app access gate or model credentials. Redeploy after changing environment settings.
+
+For testing OAuth locally, register a separate app with callback `http://localhost:3001/api/zotero/callback` and use `ZOTERO_OAUTH_ORIGIN=http://localhost:3001`. Production requires HTTPS. Arbitrary preview URLs will not work with the production registration; use a separate registration and matching stable preview origin. `ZOTERO_MODE=local` still reads the running desktop app without Zotero credentials. Remove old `ZOTERO_API_KEY` and `ZOTERO_USER_ID` settings after migrating; they are no longer read. The legacy `web` mode selects OAuth.
+
+The user enters the audit access token if required, then clicks **Connect Zotero**. Authorization opens in a popup so the manuscript remains in place. The app requests read access to the personal library, without note, write, or group access preselected. Zotero controls the final permissions the user grants. Synced Zotero-storage PDFs are accessible through the existing retrieval path; local-only and WebDAV-only PDFs still need desktop mode. Group-library OAuth selection is not implemented.
+
+This follows [Zotero's OAuth 1.0a key exchange](https://www.zotero.org/support/dev/web_api/v3/oauth): OAuth removes manual key entry, but Zotero still issues a sensitive API credential. The prototype seals it with AES-256-GCM in an HttpOnly, SameSite=Lax cookie (Secure with a `__Host-` prefix on HTTPS). Application JavaScript and AI prompts do not receive the plaintext credential. The server decrypts it per request; there is no credential database or shared global user connection. Cookies and the encryption secret must still be treated as credentials. Local HTTP cookies are only for loopback development.
+
+Connections have an absolute eight-hour lifetime. Temporary OAuth handshakes expire after ten minutes and are bound to the browser, configured origin, and audit access configuration. Callback tokens must match before exchange. Rotating the encryption secret or audit access token invalidates existing local sessions. **Disconnect Zotero** revokes the OAuth-created key through Zotero and clears the cookies; a failed revocation leaves the connection available for retry. Cookie expiry alone does not revoke the indefinitely valid Zotero key. After expiry, users can remove old authorizations from [Zotero API key settings](https://www.zotero.org/settings/keys).
+
+This is browser-session isolation, not project accounts. People using the same browser profile share its connection. Future durable multi-user projects should migrate to authenticated accounts and an encrypted server-side credential store with centralized session revocation. OAuth is independent of `AUDIT_ACCESS_TOKEN`; possessing a Zotero connection does not grant access to the audit service.
+
+Shared Express/Vercel connection routes:
+
+- `GET /api/zotero/status`: setup and connection status, account label, and expiry; no credentials.
+- `POST /api/zotero/start`: authenticated, same-origin request; returns the Zotero authorization URL.
+- `GET /api/zotero/callback`: validates the temporary browser cookie and exchanges the verified request token.
+- `POST /api/zotero/disconnect`: authenticated, same-origin revocation and cookie cleanup.
+
+The callback page removes its query parameters and sends only a success/failure message to its same-origin opener. OAuth responses use `Cache-Control: no-store` and `Referrer-Policy: no-referrer`. If platform request logs include callback URLs, redact their query strings; the app never logs provider response bodies or credential-bearing revocation URLs.

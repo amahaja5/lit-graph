@@ -1,5 +1,5 @@
-import { createAuditService } from '../../lib/auditService.js';
-import { getEvidenceJudgments } from '../../lib/setup.js';
+import { getEvidenceJudgments, getAuditService } from '../../lib/setup.js';
+import { createZoteroOAuth } from '../../lib/zoteroOAuth.js';
 import { requestSignal } from '../../lib/requestSignal.js';
 import { requireAuditAccess } from '../../lib/auditAccess.js';
 import express from "express";
@@ -31,6 +31,7 @@ export function createApp({
   paperIdResolver,
   reviewService,
   auditService,
+  zoteroOAuth,
   serveFrontend = true,
   frontendDir = DEFAULT_FRONTEND_DIR,
   logger = console,
@@ -39,15 +40,16 @@ export function createApp({
   const resolver = paperIdResolver || createPaperIdResolver({ s2Client: client, logger });
   const reviews = reviewService || createDefaultReviewService({ s2Client: client, logger });
   const app = express();
-  const audits = auditService || createAuditService({ judgments: getEvidenceJudgments() });
   app.use('/api/audit', (req, res, next) => {
     try { requireAuditAccess(req); next(); } catch (error) { sendError(res, error); }
   });
   app.use('/api/audit', express.json({ limit: '4.2mb' }));
   app.use(express.json({ limit: "1mb" }));
+  app.all('/api/zotero/:action', (req, res) =>
+    (zoteroOAuth || createZoteroOAuth()).handle(req, res, req.params.action));
   for (const action of ['status', 'extract', 'check']) {
     app[action === 'status' ? 'get' : 'post'](`/api/audit/${action}`, async (req, res) => {
-      try { res.setHeader('Cache-Control', 'no-store'); res.json(await audits[action](req.body, { signal: requestSignal(req, res) })); }
+      try { res.setHeader('Cache-Control', 'no-store'); res.json(await (auditService || getAuditService(req))[action](req.body, { signal: requestSignal(req, res) })); }
       catch (error) { sendError(res, error); }
     });
   }

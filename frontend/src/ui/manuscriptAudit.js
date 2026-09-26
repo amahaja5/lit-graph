@@ -17,6 +17,7 @@ let inventory = null,
   busy = false,
   controller = null,
   modelReady = false;
+let zoteroStatus = null, zoteroBusy = false, zoteroIdentity = null;
 const inputs = () => [
   ...document.querySelectorAll(
     "#manuscript-audit input, #manuscript-audit textarea, #manuscript-audit select",
@@ -28,8 +29,11 @@ function message(content, error = false) {
   $("audit-status").classList.toggle("audit-error", error);
 }
 function updateControls() {
-  $("audit-extract").disabled = busy || !modelReady;
-  $("audit-run").disabled = busy || !modelReady || !inventory?.claims.length;
+  const locked = busy || zoteroBusy;
+  $("zotero-connect").disabled = busy || zoteroBusy || !zoteroStatus?.configured;
+  $("zotero-disconnect").disabled = busy || zoteroBusy;
+  $("audit-extract").disabled = locked || !modelReady;
+  $("audit-run").disabled = locked || !modelReady || !inventory?.claims.length;
   const complete =
     inventory?.claims.length &&
     inventory.claims.every((c) => results[c.id] && !results[c.id].error);
@@ -39,13 +43,13 @@ function updateControls() {
       ? "Resume / retry audit"
       : "Check cited claims";
   $("audit-stop").hidden = !busy;
-  $("audit-example").disabled = busy;
-  $("audit-connect").disabled = busy;
+  $("audit-example").disabled = locked;
+  $("audit-connect").disabled = locked;
   $("audit-add-reference").disabled =
-    busy || !inventory || inventory.references.length >= 80;
+    locked || !inventory || inventory.references.length >= 80;
   $("audit-add-passage").disabled =
-    busy || !inventory || inventory.claims.length >= 150;
-  for (const el of inputs()) el.disabled = busy;
+    locked || !inventory || inventory.claims.length >= 150;
+  for (const el of inputs()) el.disabled = locked;
   $("audit-download").disabled = !inventory;
   $("audit-download-json").disabled = !inventory;
 }
@@ -70,22 +74,25 @@ function invalidateResults() {
   message("Inventory changed. Run the audit again.");
   updateControls();
 }
-async function request(action, body) {
+async function request(action, body, namespace = 'audit') {
   const headers = { accept: "application/json" };
   const token = $("audit-token").value.trim();
   if (token) headers.authorization = `Bearer ${token}`;
   if (body) headers["content-type"] = "application/json";
-  const response = await fetch(`/api/audit/${action}`, {
+  const response = await fetch(`/api/${namespace}/${action}`, {
     method: body ? "POST" : "GET",
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    signal: controller?.signal,
+    signal: namespace === 'audit' && ['extract', 'check'].includes(action) ? controller?.signal : undefined,
   });
   const data = await response.json();
-  if (!response.ok)
-    throw new Error(
+  if (!response.ok) {
+    const error = new Error(
       data?.error?.message || `Request failed (${response.status}).`,
     );
+    error.code = data?.error?.code;
+    throw error;
+  }
   return data;
 }
 async function connect() {
@@ -94,6 +101,8 @@ async function connect() {
   updateControls();
   $("audit-connect").disabled = true;
   try {
+    zoteroStatus = await request('status', undefined, 'zotero');
+    renderZoteroConnection();
     const status = await request("status");
     modelReady = status.modelConfigured;
     $("audit-connection").textContent = status.zoteroError
@@ -121,11 +130,76 @@ async function connect() {
   } catch (e) {
     modelReady = false;
     $("audit-connection").textContent = "Connection needs attention";
+    $("zotero-connection-status").textContent = e.message;
+    if (e.code === 'audit_access_required') {
+      $("audit-token").closest('details').open = true;
+      $("audit-token").focus();
+    }
     message(e.message, true);
   } finally {
     $("audit-connect").disabled = false;
     updateControls();
   }
+}
+function renderZoteroConnection() {
+  const s = zoteroStatus;
+  const identity = s.connected ? `oauth:${s.userId}` : s.mode;
+  if (zoteroIdentity !== null && zoteroIdentity !== identity) invalidateResults();
+  zoteroIdentity = identity;
+  $("zotero-connect").hidden = s.connected || (s.mode === 'local' && !s.configured);
+  $("zotero-disconnect").hidden = !s.connected;
+  $("zotero-manage").hidden = s.mode === 'local' && !s.connected;
+  $("zotero-signin-hint").hidden = s.mode === 'local' && !s.configured;
+  $("zotero-connection-status").textContent = s.connected
+    ? `Connected as ${s.username || `Zotero user ${s.userId}`}. This browser’s connection expires after 8 hours.`
+    : s.mode === 'local'
+      ? 'Local mode: keep Zotero Desktop open on this computer. No Zotero API key is needed.'
+      : s.configured
+        ? 'Connect your Zotero account to read your personal library and synced PDFs.'
+        : 'Zotero sign-in has not been enabled on this server. Ask the app administrator to finish setup.';
+}
+async function connectZotero() {
+  if (busy || zoteroBusy) return;
+  const popup = window.open('about:blank', 'litgraph-zotero', 'popup,width=640,height=760');
+  if (!popup) { message('Allow the Zotero sign-in popup, then try Connect Zotero again.', true); return; }
+  zoteroBusy = true;
+  updateControls();
+  let timer;
+  const cleanup = () => { clearInterval(timer); window.removeEventListener('message', onMessage); zoteroBusy = false; updateControls(); };
+  const onMessage = async (event) => {
+    if (event.origin !== window.location.origin || event.source !== popup || event.data?.type !== 'litgraph-zotero') return;
+    cleanup();
+    if (event.data.success) { invalidateResults(); await connect(); }
+    else message('Zotero sign-in was cancelled, expired, or failed. Try Connect Zotero again.', true);
+  };
+  window.addEventListener('message', onMessage);
+  try {
+    const { authorizeUrl } = await request('start', {}, 'zotero');
+    const url = new URL(authorizeUrl);
+    if (url.origin !== 'https://www.zotero.org' || url.pathname !== '/oauth/authorize') throw new Error('Unexpected Zotero sign-in address.');
+    popup.location.href = url.href;
+    message('Complete sign-in in the Zotero window. Your manuscript stays here.');
+    const started = Date.now();
+    timer = setInterval(async () => {
+      if (popup.closed || Date.now() - started > 10 * 60 * 1000) {
+        cleanup();
+        await connect();
+        if (!zoteroStatus?.connected) message('Zotero sign-in was not completed. You can try again.', true);
+      }
+    }, 1000);
+  } catch (e) { cleanup(); popup.close(); message(e.message, true); }
+}
+async function disconnectZotero() {
+  if (busy || zoteroBusy) return;
+  zoteroBusy = true;
+  updateControls();
+  try {
+    await request('disconnect', {}, 'zotero');
+    invalidateResults();
+    await connect();
+    message('Zotero access revoked and this browser disconnected.');
+  } catch (e) { message(e.message, true); }
+  finally { zoteroBusy = false; updateControls(); }
 }
 async function uploadPayload() {
   const file = $("audit-file").files[0];
@@ -456,6 +530,8 @@ $("audit-extract").addEventListener("click", extract);
 $("audit-run").addEventListener("click", run);
 $("audit-stop").addEventListener("click", () => controller?.abort());
 $("audit-connect").addEventListener("click", connect);
+$("zotero-connect").addEventListener("click", connectZotero);
+$("zotero-disconnect").addEventListener("click", disconnectZotero);
 $("audit-download").addEventListener("click", () => download());
 $("audit-download-json").addEventListener("click", () => download(true));
 $("audit-arxiv").addEventListener("input", () => {

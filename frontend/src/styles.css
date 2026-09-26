@@ -131,7 +131,7 @@ a {
 .app-shell {
   width: min(1600px, 100%);
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0 1rem 1rem;
   display: grid;
   gap: 0.8rem;
 }
@@ -145,9 +145,18 @@ a {
 }
 
 .topbar {
-  display: grid;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
   gap: 0.8rem;
-  align-items: end;
+  align-items: center;
+  margin: 0 -1rem;
+  padding: 1rem;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
 }
 
 .tagline {
@@ -741,7 +750,16 @@ a {
 
 @media (max-width: 640px) {
   .app-shell {
+    padding: 0 0.65rem 0.65rem;
+  }
+
+  .topbar {
+    margin: 0 -0.65rem;
     padding: 0.65rem;
+  }
+
+  .topbar .tagline {
+    display: none;
   }
 
   .search-form {
@@ -776,7 +794,7 @@ a {
 
 /* Manuscript citation audit */
 [hidden] { display: none !important; }
-.workspace-nav { display:flex; gap:.35rem; border-bottom:1px solid var(--line); padding-bottom:.7rem; }
+.workspace-nav { display:flex; flex-wrap:wrap; gap:.35rem; }
 .workspace-nav button { background:transparent; color:var(--muted); border:1px solid transparent; }
 .workspace-nav button[aria-pressed="true"] { background:var(--accent); color:white; }
 .audit-active .layout, .audit-active .review-section { display:none; }
@@ -797,6 +815,7 @@ a {
 .audit-guide strong { display:block; }
 .audit-scope { border-top:1px solid var(--line); padding-top:1.2rem; font-size:.88rem; line-height:1.65; }
 .audit-actions { display:flex; flex-wrap:wrap; gap:.6rem; }
+.audit-zotero-connection { display:grid; gap:.65rem; padding:1rem; border:1px solid var(--line); border-radius:8px; background:var(--bg); font-size:.88rem; line-height:1.5; }
 .audit-settings { padding-top:.5rem; }
 .audit-settings[open] { display:grid; gap:.6rem; }
 .audit-settings input { margin:.7rem 0; }

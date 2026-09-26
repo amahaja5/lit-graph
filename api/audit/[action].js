@@ -13,7 +13,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: { message: "Method not allowed" } });
     res.setHeader("Cache-Control", "no-store");
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    res.json(await getAuditService()[action](body, { signal: requestSignal(req, res) }));
+    res.json(await getAuditService(req)[action](body, { signal: requestSignal(req, res) }));
   } catch (error) {
     sendError(res, error);
   }

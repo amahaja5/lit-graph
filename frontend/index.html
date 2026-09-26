@@ -13,7 +13,13 @@
           <h1>LitGraph</h1>
           <p class="tagline">Interactive literature snowballing explorer (MVP)</p>
         </div>
-        <form id="search-form" class="search-form" novalidate>
+        <nav class="workspace-nav" aria-label="Workspace">
+          <button type="button" data-workspace="explore" aria-pressed="true">Explore literature</button>
+          <button type="button" data-workspace="audit" aria-pressed="false">Check a manuscript</button>
+        </nav>
+      </header>
+
+      <form id="search-form" class="search-form" novalidate>
           <label for="paper-id-input" class="sr-only">Semantic Scholar ID / DOI / arXiv ID / PubMed ID / NBER ID</label>
           <input
             id="paper-id-input"
@@ -23,18 +29,12 @@
             autocomplete="off"
           />
           <button id="search-submit" type="submit">Load Seed</button>
-        </form>
-      </header>
+      </form>
 
       <div id="global-status" class="global-status sr-only live-region" aria-live="polite"></div>
       <div id="global-error" class="global-error sr-only live-region" aria-live="assertive"></div>
       <div id="global-notices" class="global-notices sr-only live-region" aria-live="polite"></div>
       <div id="hover-tip" class="hover-tip" hidden></div>
-
-      <nav class="workspace-nav" aria-label="Workspace">
-        <button type="button" data-workspace="explore" aria-pressed="true">Explore literature</button>
-        <button type="button" data-workspace="audit" aria-pressed="false">Check a manuscript</button>
-      </nav>
 
       <section id="manuscript-audit" class="audit-workspace" aria-labelledby="audit-title" hidden>
         <div class="audit-intro">
@@ -54,6 +54,15 @@
             <label for="audit-text">Or paste manuscript text</label>
             <textarea id="audit-text" rows="12" maxlength="100000" placeholder="Paste the manuscript, including in-text citations and references…"></textarea>
             <label for="audit-collection">Find cited sources in Zotero</label>
+            <div class="audit-zotero-connection">
+              <p id="zotero-connection-status" role="status">Checking Zotero connection…</p>
+              <div class="audit-actions">
+                <button id="zotero-connect" type="button" class="secondary" disabled>Connect Zotero</button>
+                <button id="zotero-disconnect" type="button" class="secondary" hidden>Disconnect Zotero</button>
+              </div>
+              <p id="zotero-signin-hint" class="muted">Sign in on Zotero’s website. No API key to copy or share.</p>
+              <a id="zotero-manage" href="https://www.zotero.org/settings/keys" target="_blank" rel="noopener noreferrer" hidden>Manage access on Zotero</a>
+            </div>
             <select id="audit-collection"><option value="">Search the whole library</option></select>
             <p class="muted">Sources can be outside the manuscript’s own collection. Public arXiv PDFs are a fallback.</p>
             <div class="audit-actions"><button id="audit-extract" type="button">Extract citations</button><button id="audit-example" class="secondary" type="button">Load example</button></div>
