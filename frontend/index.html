@@ -16,6 +16,7 @@
         <nav class="workspace-nav" aria-label="Workspace">
           <button type="button" data-workspace="explore" aria-pressed="true">Explore literature</button>
           <button type="button" data-workspace="audit" aria-pressed="false">Check a manuscript</button>
+          <button type="button" data-workspace="import" aria-pressed="false">Import citations <span class="nav-pilot">Pilot</span></button>
         </nav>
       </header>
 
@@ -88,6 +89,57 @@
           <div class="audit-section-heading"><p id="audit-summary" class="muted"></p><div class="audit-actions"><button id="audit-add-passage" type="button" class="secondary">Add missing passage</button>
             <button id="audit-download" type="button" class="secondary">Download report</button><button id="audit-download-json" type="button" class="secondary">Download evidence JSON</button></div></div>
           <div id="audit-results" class="audit-results"></div>
+        </section>
+      </section>
+
+      <section id="citation-import" class="audit-workspace" aria-labelledby="import-title" hidden>
+        <div class="audit-intro">
+          <div><p class="audit-eyebrow">MANUSCRIPT → ZOTERO · TESTING PILOT</p><h2 id="import-title">Give your references a home.</h2>
+          <p>Upload a public or test manuscript, review its references, and gather the matches in a new Zotero collection.</p></div>
+          <span class="audit-badge">Public / test manuscripts only</span>
+        </div>
+        <div class="audit-columns">
+          <section class="audit-input panel-card" aria-labelledby="import-input-title">
+            <h3 id="import-input-title">1. Extract references</h3>
+            <label for="import-file">Upload PDF, Word, or text</label>
+            <input id="import-file" type="file" accept=".pdf,.docx,.txt,.md" />
+            <p class="muted">Up to 3 MB, 100,000 characters, and 80 references. Include the bibliography. Scanned PDFs need OCR first.</p>
+            <label for="import-text">Or paste a manuscript or bibliography</label>
+            <textarea id="import-text" rows="9" maxlength="100000" placeholder="Paste text including the references…"></textarea>
+            <label class="import-consent"><input id="import-consent" type="checkbox" /> This is a public/test manuscript that I can send to Anthropic for extraction.</label>
+            <div class="audit-actions"><button id="import-extract" type="button" disabled>Extract references</button><button id="import-example" type="button" class="secondary">Load sample bibliography</button></div>
+            <p class="muted audit-disclosure">Extraction sends your manuscript to this server and Anthropic. Lookup sends reference strings or DOIs to Crossref. Only selected bibliographic records are saved to Zotero. This app does not persist your manuscript; unfinished work is lost on refresh. Baseten is not used in this pilot.</p>
+          </section>
+          <section class="audit-input panel-card" aria-labelledby="import-connection-title">
+            <h3 id="import-connection-title">Test connection</h3>
+            <label for="import-token">Pilot access token</label>
+            <input id="import-token" type="password" autocomplete="off" placeholder="Provided by the app administrator" />
+            <button id="import-refresh" type="button" class="secondary">Check connection</button>
+            <p id="import-connection-status" class="muted" role="status">Checking server setup…</p>
+            <div class="audit-zotero-connection">
+              <p id="import-zotero-status">Zotero is needed only when saving a collection.</p>
+              <div class="audit-actions"><button id="import-zotero-connect" type="button" class="secondary" disabled>Connect Zotero for import</button><button id="import-zotero-disconnect" type="button" class="secondary" hidden>Disconnect</button></div>
+              <p class="muted">Authorize read and write access to your personal library. No manuscript or PDF attachment is uploaded to Zotero.</p>
+            </div>
+            <p class="muted">This pilot looks up works indexed by Crossref. Some books, preprints, and archival sources may remain unresolved. You can download the full inventory for follow-up.</p>
+          </section>
+        </div>
+        <p id="import-status" class="audit-status" role="status" aria-live="polite">Add a public/test manuscript to begin.</p>
+        <section id="import-review" hidden aria-labelledby="import-review-title">
+          <div class="audit-section-heading"><div><h3 id="import-review-title">2. Review references and choose matches</h3><p id="import-summary" class="muted"></p></div>
+            <div class="audit-actions"><button id="import-lookup-all" type="button">Look up references</button><button id="import-stop" type="button" class="secondary" hidden>Stop after current reference</button><button id="import-download" type="button" class="secondary">Download inventory</button></div>
+          </div>
+          <p id="import-warnings" class="muted"></p>
+          <div id="import-references" class="audit-results"></div>
+          <div class="audit-actions import-add"><button id="import-add" type="button" class="secondary">Add missing reference</button></div>
+          <section class="audit-input panel-card import-save" aria-labelledby="import-save-title">
+            <h3 id="import-save-title">3. Save selected matches</h3>
+            <label for="import-name">New Zotero collection name</label><input id="import-name" type="text" maxlength="200" placeholder="Manuscript references" />
+            <p id="import-save-summary" class="muted">Choose matches above to save.</p>
+            <button id="import-save" type="button" disabled>Create collection and save selected</button>
+            <a id="import-open-collection" target="_blank" rel="noopener noreferrer" hidden>Open collection in Zotero</a>
+            <p class="muted">Exact DOI matches already in your library are reused. Your other collections and existing item metadata are preserved.</p>
+          </section>
         </section>
       </section>
 
@@ -204,5 +256,7 @@
 
     <script type="module" src="/src/main.js"></script>
     <script type="module" src="/src/ui/manuscriptAudit.js"></script>
+    <script type="module" src="/src/ui/citationImport.js"></script>
+    <script type="module" src="/src/workspaces.js"></script>
   </body>
 </html>

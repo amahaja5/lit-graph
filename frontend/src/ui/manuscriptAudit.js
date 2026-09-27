@@ -560,17 +560,10 @@ $("audit-example").addEventListener("click", () => {
     "Example loaded: one reported result and one deliberately altered number.",
   );
 });
-for (const button of document.querySelectorAll("[data-workspace]"))
-  button.addEventListener("click", () => {
-    const audit = button.dataset.workspace === "audit";
-    document.body.classList.toggle("audit-active", audit);
-    $("manuscript-audit").hidden = !audit;
-    for (const b of document.querySelectorAll("[data-workspace]"))
-      b.setAttribute("aria-pressed", String(b === button));
-    window.dispatchEvent(new Event("resize"));
-    if (audit && !$("audit-connection").dataset.loaded) {
-      $("audit-connection").dataset.loaded = "true";
-      connect();
-    }
-  });
+window.addEventListener('litgraph-workspace', (event) => {
+  if (event.detail === 'audit' && !$("audit-connection").dataset.loaded) {
+    $("audit-connection").dataset.loaded = 'true';
+    connect();
+  }
+});
 updateControls();

@@ -197,3 +197,15 @@ test('Express and Vercel expose the shared OAuth handler without leaking credent
   assert.equal(result.statusCode, 200);
   assert.ok(!JSON.stringify(result.body).includes('app-secret'));
 });
+
+test('import sign-in explicitly requests write access while audit sign-in stays read-only', async () => {
+  const oauth = createZoteroOAuth({ env, fetchImpl: provider().fetchImpl });
+  const start = res(), request = req('POST'); request.body = { write: true };
+  await oauth.handle(request, start, 'start');
+  const url = new URL(start.body.authorizeUrl);
+  assert.equal(url.searchParams.get('write_access'), '1');
+  assert.equal(url.searchParams.get('notes_access'), '0');
+  const callback = res();
+  await oauth.handle(req('GET', cookie(start, 'flow'), { oauth_token: url.searchParams.get('oauth_token'), oauth_verifier: 'verifier' }), callback, 'callback');
+  assert.equal(oauth.status(req('GET', cookie(callback, 'session'))).writeRequested, true);
+});

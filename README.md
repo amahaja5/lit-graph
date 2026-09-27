@@ -496,3 +496,27 @@ Shared Express/Vercel connection routes:
 - `POST /api/zotero/disconnect`: authenticated, same-origin revocation and cookie cleanup.
 
 The callback page removes its query parameters and sends only a success/failure message to its same-origin opener. OAuth responses use `Cache-Control: no-store` and `Referrer-Policy: no-referrer`. If platform request logs include callback URLs, redact their query strings; the app never logs provider response bodies or credential-bearing revocation URLs.
+
+## Citation import pilot
+
+Open `/#import` or choose **Import citations · Pilot**. This is a separate workflow from manuscript claim checking. It accepts public/test PDF, DOCX, TXT, Markdown, or pasted text, extracts up to 80 references, looks up Crossref metadata, and creates a new personal Zotero collection containing only manually selected matches.
+
+- The tester must confirm the manuscript can be sent to Anthropic. This pilot reuses `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`; it does not use Baseten or local inference.
+- Uploads are capped at 3 MB / 100,000 extracted characters. Scans require OCR first. Extracted reference strings must be locatable in the manuscript.
+- Lookups send only DOI or reference strings to Crossref. DOI results and the top three bibliographic candidates are shown for review; none are selected automatically. Works outside Crossref remain unresolved. Entries can be corrected, retried, added manually, and downloaded as a JSON inventory.
+- Use the existing `AUDIT_ACCESS_TOKEN` for the hosted pilot. Configure the existing Zotero OAuth variables above with a stable HTTPS origin and registered callback. A preview deployment must have its own matching origin/callback configuration; the production registration will not work on an arbitrary preview URL.
+- **Connect Zotero for import** requests personal-library write access, without notes/groups access. An existing read-only audit connection must be disconnected and reconnected from this tab. The audit sign-in still defaults to read-only. Zotero enforces the user's final granted permissions.
+- Saving reuses exact DOI matches in the library and preserves their metadata and other collections. New collection/item keys are stable within an import, making retries after uncertain responses safe. Conflicting item versions and partial write failures are reported rather than treated as success. Save/lookup run one reference at a time and can stop after the current request.
+- No bucket, database, or manuscript persistence is added. Browser state is lost on refresh; records already saved to Zotero remain there. Downloads contain references and lookup results, not the original manuscript. Logs must not be configured to capture request bodies.
+
+Shared local/Vercel API routes:
+
+- `GET /api/import/status`: model configuration status; requires pilot access.
+- `POST /api/import/extract`: `{consent:true,text}` or `{consent:true,file:{name,base64}}`.
+- `POST /api/import/lookup`: `{doi}` or `{bibliography,title}`; returns candidates.
+- `POST /api/import/collection`: `{importId,name}`; creates/reuses this import's collection.
+- `POST /api/import/save`: `{importId,doi}`; fetches canonical Crossref metadata and saves/reuses one reference.
+
+The last two routes additionally require an OAuth connection and exact configured origin. The server never accepts an arbitrary upstream URL, API credential, or Zotero item payload from the browser.
+
+Pilot verification: connect with the access token, load the sample bibliography, confirm processing, extract, look up both references, manually select the correct matches, authorize Zotero write access, and save a named collection. Verify both references in Zotero. Retry a partial save to confirm completed records are retained. No live Zotero writes are performed by the automated tests.
