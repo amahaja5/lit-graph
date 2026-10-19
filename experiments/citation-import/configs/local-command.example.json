@@ -1,0 +1,11 @@
+{
+  "name": "local-sft",
+  "adapter": "command",
+  "location": "local",
+  "model": "REPLACE_WITH_BASE_MODEL",
+  "checkpoint": "REPLACE_WITH_CHECKPOINT_HASH",
+  "precision": "REPLACE_WITH_BF16_OR_QUANTIZATION",
+  "runtime": "REPLACE_WITH_RUNTIME_AND_VERSION",
+  "command": ["python3", "/absolute/path/to/your_adapter.py"],
+  "timeoutMs": 120000
+}

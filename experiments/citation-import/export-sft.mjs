@@ -1,0 +1,14 @@
+import { readFile, writeFile } from 'node:fs/promises';
+import { args } from './run.mjs';
+import { SYSTEM, validateDataset } from './core.mjs';
+const opts = args(process.argv.slice(2));
+const split = opts.split || 'train';
+if (!['train','validation'].includes(split)) throw Error('Test labels cannot be exported for training.');
+if (!opts.out) throw Error('Pass --out PATH (existing files are never overwritten).');
+const data = validateDataset(JSON.parse(await readFile(opts.dataset || 'experiments/citation-import/data/smoke.json','utf8')));
+const variant = opts.variant || 'bibliography';
+const selected = data.filter(d=>d.split===split);
+if (!selected.length || selected.some(d=>!d.inputs[variant]) || variant === 'source_file') throw Error('Choose a populated text variant.');
+const lines = selected.map(d=>JSON.stringify({messages:[{role:'system',content:SYSTEM},{role:'user',content:JSON.stringify({manuscript:d.inputs[variant]})},{role:'assistant',content:JSON.stringify({references:d.gold.map(({workId,resolution,...r})=>r)})}]}));
+await writeFile(opts.out,lines.join('\n')+'\n',{flag:'wx'});
+console.log(`Exported ${lines.length} ${split} examples. Synthetic data is for smoke testing, not a sufficient SFT corpus.`);

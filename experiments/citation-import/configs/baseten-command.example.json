@@ -1,0 +1,11 @@
+{
+  "name": "baseten-sft",
+  "adapter": "command",
+  "location": "cloud",
+  "model": "SAME_MODEL_AS_LOCAL",
+  "checkpoint": "SAME_CHECKPOINT_HASH_AS_LOCAL",
+  "precision": "SAME_PRECISION_AS_LOCAL",
+  "runtime": "REPLACE_WITH_DEPLOYMENT_AND_RUNTIME_VERSION",
+  "command": ["python3", "/absolute/path/to/your_baseten_adapter.py"],
+  "timeoutMs": 180000
+}

@@ -1,0 +1,1 @@
+{"name":"anthropic-existing-client","adapter":"anthropic","location":"cloud","model":null,"checkpoint":null,"precision":"provider-managed","runtime":"existing-app-client"}
