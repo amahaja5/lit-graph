@@ -58,7 +58,7 @@
             <div class="audit-zotero-connection">
               <p id="zotero-connection-status" role="status">Checking Zotero connection…</p>
               <div class="audit-actions">
-                <button id="zotero-connect" type="button" class="secondary" disabled>Connect Zotero</button>
+                <button id="zotero-connect" type="button" class="secondary" disabled>Sign in with Zotero</button>
                 <button id="zotero-disconnect" type="button" class="secondary" hidden>Disconnect Zotero</button>
               </div>
               <p id="zotero-signin-hint" class="muted">Sign in on Zotero’s website. No API key to copy or share.</p>
@@ -68,7 +68,6 @@
             <p class="muted">Sources can be outside the manuscript’s own collection. Public arXiv PDFs are a fallback.</p>
             <div class="audit-actions"><button id="audit-extract" type="button">Extract citations</button><button id="audit-example" class="secondary" type="button">Load example</button></div>
             <details class="audit-settings"><summary>Connection settings</summary>
-              <label for="audit-token">Access token for a hosted app</label><input id="audit-token" type="password" autocomplete="off" placeholder="Only required for remote access" />
               <button id="audit-connect" type="button" class="secondary">Refresh connection</button>
             </details>
             <p class="muted audit-disclosure">Manuscript text and source excerpts are sent to Anthropic when you run these steps. When semantic evidence ranking is configured (including shadow evaluation), claims and candidate source excerpts are also sent to TypeSafe. Results stay in this browser session unless downloaded.</p>
@@ -112,13 +111,11 @@
           </section>
           <section class="audit-input panel-card" aria-labelledby="import-connection-title">
             <h3 id="import-connection-title">Connect Zotero</h3>
-            <label for="import-token">Pilot access token</label>
-            <input id="import-token" type="password" autocomplete="off" placeholder="Provided by the app administrator" />
             <button id="import-refresh" type="button" class="secondary">Check connection</button>
             <p id="import-connection-status" class="muted" role="status">Checking server setup…</p>
             <div class="audit-zotero-connection">
-              <p id="import-zotero-status">Zotero is needed only when saving a collection.</p>
-              <div class="audit-actions"><button id="import-zotero-connect" type="button" class="secondary" disabled>Connect Zotero for import</button><button id="import-zotero-disconnect" type="button" class="secondary" hidden>Disconnect</button></div>
+              <p id="import-zotero-status">Sign in with an allowed Zotero account to use the app.</p>
+              <div class="audit-actions"><button id="import-zotero-connect" type="button" class="secondary" disabled>Sign in with Zotero</button><button id="import-zotero-disconnect" type="button" class="secondary" hidden>Sign out</button></div>
               <p class="muted">Authorize read and write access to your personal library. No manuscript or PDF attachment is uploaded to Zotero.</p>
             </div>
             <p class="muted">This pilot looks up works indexed by Crossref. Some books, preprints, and archival sources may remain unresolved. You can download the full inventory for follow-up.</p>

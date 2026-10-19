@@ -209,3 +209,62 @@ test('import sign-in explicitly requests write access while audit sign-in stays 
   await oauth.handle(req('GET', cookie(start, 'flow'), { oauth_token: url.searchParams.get('oauth_token'), oauth_verifier: 'verifier' }), callback, 'callback');
   assert.equal(oauth.status(req('GET', cookie(callback, 'session'))).writeRequested, true);
 });
+
+test('Zotero app login opens only the handshake and requires an allowed account', async () => {
+  const { requireAppAccess } = await import('../../lib/appAccess.js');
+  const p = provider();
+  const appEnv = { ...env, APP_AUTH_MODE: 'zotero', ZOTERO_ALLOWED_USERS: 'academic-1, avi.mahajan, avimhjn, amahajan10' };
+  const oauth = createZoteroOAuth({ env: appEnv, fetchImpl: p.fetchImpl });
+  const status = res(); await oauth.handle(req(), status, 'status');
+  assert.equal(status.statusCode, 200); assert.equal(status.body.appLogin, true);
+  assert.equal(status.body.connected, false);
+  assert.throws(() => requireAppAccess(req(), { env: appEnv, oauth }), /Sign in/);
+  const signedIn = await login(oauth);
+  assert.doesNotThrow(() => requireAppAccess(req('GET', signedIn.session), { env: appEnv, oauth }));
+  assert.doesNotThrow(() => requireAppAccess(req('POST', signedIn.session), { env: appEnv, oauth }));
+  const crossOrigin = req('POST', signedIn.session); crossOrigin.headers.origin = 'https://attacker.example';
+  assert.throws(() => requireAppAccess(crossOrigin, { env: appEnv, oauth }), /from this app/);
+  const forged = req('GET', signedIn.session + 'tampered');
+  assert.throws(() => requireAppAccess(forged, { env: appEnv, oauth }), /Sign in/);
+  // Changing the allowlist invalidates access even for an already-issued cookie.
+  appEnv.ZOTERO_ALLOWED_USERS = 'another-user';
+  assert.throws(() => requireAppAccess(req('GET', signedIn.session), { env: appEnv, oauth }), /Sign in/);
+});
+
+test('unlisted Zotero accounts receive no app session and their new key is revoked', async () => {
+  const p = provider();
+  const oauth = createZoteroOAuth({ env: { ...env, APP_AUTH_MODE: 'zotero', ZOTERO_ALLOWED_USERS: 'amahajan10' }, fetchImpl: p.fetchImpl });
+  const start = res(); await oauth.handle(req('POST'), start, 'start');
+  const token = new URL(start.body.authorizeUrl).searchParams.get('oauth_token');
+  const callback = res();
+  await oauth.handle(req('GET', cookie(start, 'flow'), { oauth_token: token, oauth_verifier: 'verifier' }), callback, 'callback');
+  assert.equal(callback.statusCode, 400);
+  assert.equal(cookie(callback, 'session'), undefined);
+  assert.equal(p.requests.at(-1).method, 'DELETE');
+  assert.ok(!callback.body.includes('private-1'));
+});
+
+test('app login fails closed without an allowlist, and accepts a numeric user ID', async () => {
+  const p = provider();
+  const appEnv = { ...env, APP_AUTH_MODE: 'zotero' };
+  const oauth = createZoteroOAuth({ env: appEnv, fetchImpl: p.fetchImpl });
+  const start = res(); await oauth.handle(req('POST'), start, 'start');
+  assert.equal(start.statusCode, 503); assert.equal(p.requests.length, 0);
+  assert.equal(oauth.status(req()).configured, false);
+  appEnv.ZOTERO_ALLOWED_USERS = '1';
+  const signedIn = await login(oauth);
+  assert.equal(oauth.session(req('GET', signedIn.session)).userId, '1');
+});
+
+test('app session expires and signing out revokes the key and clears the cookie', async () => {
+  const p = provider(); let clock = Date.now();
+  const oauth = createZoteroOAuth({ env: { ...env, APP_AUTH_MODE: 'zotero', ZOTERO_ALLOWED_USERS: '1,2' }, fetchImpl: p.fetchImpl, now: () => clock });
+  const first = await login(oauth);
+  clock += 8 * 60 * 60 * 1000 + 1;
+  assert.equal(oauth.session(req('GET', first.session)), null);
+  const second = await login(oauth);
+  const response = res(); await oauth.handle(req('POST', second.session), response, 'disconnect');
+  assert.equal(response.statusCode, 200);
+  assert.equal(cookie(response, 'session'), 'litgraph-zotero-dev-session=');
+  assert.equal(p.requests.at(-1).method, 'DELETE');
+});

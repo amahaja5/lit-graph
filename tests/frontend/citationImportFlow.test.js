@@ -39,3 +39,25 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
     assert.match(get('import-status').textContent,/Saved 1 references.*1 need review/);
   } finally { Object.assign(globalThis,originals); }
 });
+
+test('signed-out users see Zotero sign-in without fetching protected import status', async () => {
+  class Element {
+    constructor(){this.listeners={};this.classList={toggle(){}};this.files=[];this.checked=false;this.value='';}
+    addEventListener(name,fn){this.listeners[name]=fn;}
+  }
+  const elements=new Map(); const get=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
+  const originals={document:globalThis.document,window:globalThis.window,fetch:globalThis.fetch};
+  globalThis.document={getElementById:get,querySelectorAll:()=>[]};
+  globalThis.window={addEventListener(){}};
+  const calls=[];
+  globalThis.fetch=async url=>{calls.push(url);assert.equal(url,'/api/zotero/status');return Response.json({appLogin:true,configured:true,connected:false});};
+  try {
+    await import('../../frontend/src/ui/citationImport.js?signed-out');
+    await get('import-refresh').listeners.click();
+    assert.equal(get('import-zotero-connect').disabled,false);
+    assert.equal(get('import-extract').disabled,true);
+    assert.deepEqual(calls,['/api/zotero/status']);
+    assert.match(get('import-connection-status').textContent,/Sign in/);
+    assert.equal(elements.has('import-token'),false);
+  } finally { Object.assign(globalThis,originals); }
+});

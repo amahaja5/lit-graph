@@ -76,8 +76,6 @@ function invalidateResults() {
 }
 async function request(action, body, namespace = 'audit') {
   const headers = { accept: "application/json" };
-  const token = $("audit-token").value.trim();
-  if (token) headers.authorization = `Bearer ${token}`;
   if (body) headers["content-type"] = "application/json";
   const response = await fetch(`/api/${namespace}/${action}`, {
     method: body ? "POST" : "GET",
@@ -103,6 +101,11 @@ async function connect() {
   try {
     zoteroStatus = await request('status', undefined, 'zotero');
     renderZoteroConnection();
+    if (zoteroStatus.appLogin && !zoteroStatus.connected) {
+      $("audit-connection").textContent = 'Sign in with Zotero to begin.';
+      message('Sign in with an allowed Zotero account to unlock the app.');
+      return;
+    }
     const status = await request("status");
     modelReady = status.modelConfigured;
     $("audit-connection").textContent = status.zoteroError
@@ -131,10 +134,6 @@ async function connect() {
     modelReady = false;
     $("audit-connection").textContent = "Connection needs attention";
     $("zotero-connection-status").textContent = e.message;
-    if (e.code === 'audit_access_required') {
-      $("audit-token").closest('details').open = true;
-      $("audit-token").focus();
-    }
     message(e.message, true);
   } finally {
     $("audit-connect").disabled = false;

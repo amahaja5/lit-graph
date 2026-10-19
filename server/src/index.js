@@ -1,7 +1,7 @@
 import { getEvidenceJudgments, getAuditService } from '../../lib/setup.js';
 import { createZoteroOAuth } from '../../lib/zoteroOAuth.js';
 import { requestSignal } from '../../lib/requestSignal.js';
-import { requireAuditAccess } from '../../lib/auditAccess.js';
+import { requireAppAccess } from '../../lib/appAccess.js';
 import { handleCitationImport } from '../../lib/citationImportHandler.js';
 import express from "express";
 import fs from "node:fs";
@@ -43,11 +43,11 @@ export function createApp({
   const reviews = reviewService || createDefaultReviewService({ s2Client: client, logger });
   const app = express();
   app.use('/api/import', (req, res, next) => {
-    try { requireAuditAccess(req); next(); } catch (error) { sendError(res, error); }
+    try { requireAppAccess(req, { oauth: zoteroOAuth }); next(); } catch (error) { sendError(res, error); }
   });
   app.use('/api/import', express.json({ limit: '4.2mb' }));
   app.use('/api/audit', (req, res, next) => {
-    try { requireAuditAccess(req); next(); } catch (error) { sendError(res, error); }
+    try { requireAppAccess(req, { oauth: zoteroOAuth }); next(); } catch (error) { sendError(res, error); }
   });
   app.use('/api/audit', express.json({ limit: '4.2mb' }));
   app.use(express.json({ limit: "1mb" }));

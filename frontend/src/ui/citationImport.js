@@ -27,8 +27,6 @@ function controls() {
 }
 async function request(action, body, namespace = 'import') {
   const headers = { Accept: 'application/json' };
-  const token = $('token').value.trim();
-  if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const response = await fetch(`/api/${namespace}/${action}`, { method: body === undefined ? 'GET' : 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) });
   let data;
@@ -43,10 +41,16 @@ function reset() {
 async function refresh() {
   ready = false;
   try {
+    connection = await request('status', undefined, 'zotero');
+    if (connection.appLogin && !connection.connected) {
+      $('connection-status').textContent = 'Sign in to unlock extraction and imports.';
+      $('zotero-status').textContent = connection.configured ? 'Use an allowed Zotero account. Your library stays separate from other users.' : 'Zotero sign-in needs server setup.';
+      controls();
+      return;
+    }
     const status = await request('status');
     ready = status.modelConfigured || status.grobidConfigured;
     $('connection-status').textContent = ready ? 'Ready to import.' : 'Lookup is ready. Configure GROBID for PDFs or Anthropic for text extraction on the server.';
-    connection = await request('status', undefined, 'zotero');
     if (owner && connection.userId && owner !== connection.userId) {
       collection = null; importId = crypto.randomUUID(); rows.forEach(r => { r.saved = false; });
       $('open-collection').hidden = true; render();
@@ -58,7 +62,7 @@ async function refresh() {
   } catch (error) {
     connection = null;
     $('connection-status').textContent = error.message;
-    $('zotero-status').textContent = 'Check the pilot access token and refresh the connection.';
+    $('zotero-status').textContent = 'Refresh the connection and sign in with an allowed Zotero account.';
   }
   controls();
 }
@@ -177,7 +181,7 @@ async function connectZotero() {
   const finish = async () => { if (finished) return; finished = true; clearInterval(timer); window.removeEventListener('message', onMessage); busy = false; await refresh(); if (connection?.connected && connection?.writeRequested && selected().some(r => !r.saved)) await save(); };
   const onMessage = event => {
     if (event.origin === location.origin && event.source === popup && event.data?.type === 'litgraph-zotero') {
-      message(event.data.success ? 'Zotero connected.' : 'Zotero connection was not completed.', !event.data.success);
+      message(event.data.success ? 'Zotero connected.' : event.data.reason === 'account_not_allowed' ? 'This Zotero account is not allowed. Sign in with an approved account.' : 'Zotero connection was not completed.', !event.data.success);
       finish();
     }
   };

@@ -546,3 +546,23 @@ which is entirely separate from the GROBID key.
 Reference strings are taken from `raw_reference` notes when present; otherwise
 those strings are reconstructed from parsed fields and marked accordingly.
 GROBID can miss or misclassify references, and scanned PDFs require OCR first.
+
+### Zotero app sign-in
+
+Set `APP_AUTH_MODE=zotero` and `ZOTERO_ALLOWED_USERS` to a comma-separated list of
+allowed Zotero usernames or numeric user IDs. Empty lists deny all app access.
+The existing Zotero OAuth credentials, session secret, and canonical origin are
+still required. Configure these values on Vercel and redeploy.
+
+Zotero sign-in replaces the pilot token in the browser. Only sign-in/status and
+callback routes are public; import and audit processing require an unexpired,
+server-validated cookie belonging to an allowed account. Every processing POST
+also requires the configured app origin. The legacy bearer token cannot bypass
+this mode. Removing an account from the allowlist blocks its existing sessions
+on the next deployment. Unlisted accounts receive no app session and their new
+OAuth keys are revoked. Each signed-in user operates on their own personal library.
+
+Sessions expire after eight hours. Sign out revokes the Zotero key and clears the
+browser cookies. `AUDIT_ACCESS_TOKEN` can remain server-side during migration;
+it is not entered by users and is used only in legacy mode or to invalidate old
+cookies when rotated. Local desktop workflows can leave `APP_AUTH_MODE` unset.
