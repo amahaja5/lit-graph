@@ -1,3 +1,5 @@
+import { automaticMatch } from '../importMatching.js';
+import { referencesToRis } from '../ris.js';
 const $ = id => document.getElementById(`import-${id}`);
 const element = (tag, value, className = '') => { const el = document.createElement(tag); el.textContent = value; el.className = className; return el; };
 let rows = [], busy = false, stop = false, ready = false, connection = null, loaded = false;
@@ -17,8 +19,9 @@ function controls() {
   $('stop').hidden = !busy || !rows.length;
   $('stop').disabled = false;
   $('download').disabled = !rows.length;
+  $('ris').disabled = busy || !rows.length;
   $('summary').textContent = `${rows.length} references · ${rows.filter(r => r.lookedUp).length} looked up · ${rows.filter(r => r.saved).length} saved`;
-  $('save-summary').textContent = `${selected().length} selected · ${rows.filter(r => !r.selected).length} not selected. Compare title, authors, year, and DOI before saving.`;
+  $('save-summary').textContent = `${rows.filter(r => r.saved).length} saved · ${rows.filter(r => !r.saved).length} remaining. Review any uncertain matches below.`;
   $('save').textContent = collection ? 'Save remaining selected matches' : 'Create collection and save selected';
   for (const card of document.querySelectorAll('[data-import-saved="true"]')) for (const el of card.querySelectorAll('input, textarea, select, button')) el.disabled = true;
 }
@@ -41,8 +44,8 @@ async function refresh() {
   ready = false;
   try {
     const status = await request('status');
-    ready = status.modelConfigured;
-    $('connection-status').textContent = ready ? 'Extraction ready · Anthropic. Metadata lookup ready · Crossref.' : 'Lookup is ready. Extraction needs ANTHROPIC_API_KEY and ANTHROPIC_MODEL on the server.';
+    ready = status.modelConfigured || status.grobidConfigured;
+    $('connection-status').textContent = ready ? 'Ready to import.' : 'Lookup is ready. Configure GROBID for PDFs or Anthropic for text extraction on the server.';
     connection = await request('status', undefined, 'zotero');
     if (owner && connection.userId && owner !== connection.userId) {
       collection = null; importId = crypto.randomUUID(); rows.forEach(r => { r.saved = false; });
@@ -50,7 +53,7 @@ async function refresh() {
     }
     if (connection.userId) owner = connection.userId;
     $('zotero-status').textContent = connection.connected
-      ? `Connected as ${connection.username || connection.userId}. ${connection.writeRequested ? 'Write access was requested; Zotero enforces the permissions you granted.' : 'This connection was created for reading. Disconnect, then reconnect here to request write access.'}`
+      ? `Connected as ${connection.username || connection.userId}. ${connection.writeRequested ? 'Ready for automatic import.' : 'This connection was created for reading. Disconnect, then reconnect here to request write access.'}`
       : connection.configured ? 'Connect to save into your personal Zotero library.' : 'Zotero sign-in needs server setup. You can extract, look up, and download the inventory in the meantime.';
   } catch (error) {
     connection = null;
@@ -63,9 +66,11 @@ function render() {
   $('review').hidden = false;
   const root = $('references'); root.replaceChildren();
   for (const [index, row] of rows.entries()) {
-    const card = element('article', '', 'audit-claim import-reference');
+    let card = element('article', '', 'audit-claim import-reference');
     card.dataset.importSaved = String(Boolean(row.saved));
-    card.append(element('h4', `Reference ${index + 1}${row.saved ? ' · Saved to Zotero' : ''}`));
+    const heading = element('summary', `Reference ${index + 1}${row.saved ? ' · Saved to Zotero' : ''}`);
+    if (row.saved) { card = element('details', '', 'audit-claim import-reference'); card.dataset.importSaved = 'true'; card.append(heading); }
+    else card.append(element('h4', `Reference ${index + 1}`));
     const label = element('label', 'Original reference');
     const input = document.createElement('textarea'); input.rows = 3; input.maxLength = 4000; input.value = row.bibliography; label.append(input); card.append(label);
     const doiLabel = element('label', 'DOI (optional; edit to correct the lookup)');
@@ -89,7 +94,7 @@ function render() {
       const link = element('a', candidate.doi); link.href = `https://doi.org/${encodeURI(candidate.doi)}`; link.target = '_blank'; link.rel = 'noopener noreferrer'; details.append(link); card.append(details);
       const choose = element('label', '', 'import-choice'); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = row.selected;
       checkbox.addEventListener('change', () => { row.selected = checkbox.checked; controls(); });
-      choose.append(checkbox, document.createTextNode('I reviewed this match. Include it in the collection.')); card.append(choose);
+      choose.append(checkbox, document.createTextNode('Include this match in the collection.')); card.append(choose);
     }
     root.append(card);
   }
@@ -105,50 +110,63 @@ async function upload() {
   return { file: { name: file.name, base64 }, consent: $('consent').checked };
 }
 async function extract() {
-  busy = true; controls(); message('Extracting the reference list. This can take a minute…');
+  let extracted = false;
+  busy = true; stop = false; controls(); message('Importing references…');
   try {
     const data = await request('extract', await upload());
     reset();
     rows = data.references.map(r => ({ ...r, candidates: [], choice: 0, selected: false, lookedUp: false, saved: false }));
     $('name').value = `${data.filename === 'Pasted manuscript' ? 'Manuscript' : data.filename.replace(/\.[^.]+$/, '')} references`.slice(0, 200);
-    $('warnings').textContent = ['AI extraction may miss or misread references. Correct entries and add omissions before lookup.', ...(data.warnings || [])].join(' ');
-    render(); message(`Extracted ${rows.length} references. Review the entries, then look them up.`);
+    $('warnings').textContent = ['Extraction may miss or misread references. Correct entries and add omissions before lookup.', ...(data.warnings || [])].join(' ');
+    render(); extracted = true;
   } catch (error) { message(error.message, true); }
   finally { busy = false; controls(); }
+  if (extracted && !stop) {
+    const completed = await runLookup(rows, true);
+    if (completed && connection?.connected && connection?.writeRequested) await save();
+    else if (completed) message('References matched. Connect Zotero to finish the import.');
+  }
 }
-async function runLookup(list) {
+async function runLookup(list, automatic = false) {
   if (busy) return;
   busy = true; stop = false; controls();
-  let done = 0;
+  let completed = true;
+  message('Matching references…');
   try {
     for (const row of list) {
       if (stop) break;
-      message(`Looking up reference ${++done} of ${list.length}…`);
+
       row.error = ''; row.selected = false; row.candidates = []; row.lookedUp = false;
       try {
         const data = await request('lookup', { doi: row.doi, bibliography: row.bibliography, title: row.title });
         Object.assign(row, data, { choice: 0, lookedUp: true });
-      } catch (error) { row.error = error.message; render(); break; }
+        if (automatic) {
+          const choice = automaticMatch(row, row.candidates);
+          if (choice >= 0) Object.assign(row, { choice, selected: true });
+        }
+      } catch (error) { row.error = error.message; completed = false; message(error.message, true); render(); break; }
       render();
     }
-    message(stop ? 'Lookup paused. Completed results are retained.' : 'Lookup finished. Review candidates and select the matches to save.');
+    if (completed) message(stop ? 'Import paused. Completed results are retained.' : 'Matching complete. Uncertain references need review.');
+    return completed && !stop;
   } finally { busy = false; controls(); }
 }
 async function save() {
   if (busy) return;
   const pending = selected().filter(r => !r.saved);
-  if (!pending.length) return;
+  if (!pending.length) { message('No new clear matches to save. Review the remaining references or download RIS.'); return; }
   busy = true; stop = false; controls();
   try {
+    message('Saving to Zotero…');
     collection ||= await request('collection', { importId, name: $('name').value });
     $('open-collection').href = collection.url; $('open-collection').hidden = false;
-    for (const [index, row] of pending.entries()) {
+    for (const row of pending) {
       if (stop) break;
-      message(`Saving reference ${index + 1} of ${pending.length}…`);
+
       const result = await request('save', { importId, doi: row.candidates[row.choice].doi });
       row.saved = true; row.zotero = result; render();
     }
-    message(stop ? 'Save paused. Saved references remain in Zotero; continue with the remaining selections.' : `Saved ${rows.filter(r => r.saved).length} references. Open the collection in Zotero below.`);
+    message(stop ? 'Save paused. Saved references remain in Zotero; continue with the remaining selections.' : `Saved ${rows.filter(r => r.saved).length} references to Zotero. ${rows.filter(r => !r.saved).length} need review.`);
   } catch (error) { message(`${error.message} Completed saves are retained. Retry the remaining selections.`, true); }
   finally { busy = false; controls(); }
 }
@@ -156,10 +174,10 @@ async function connectZotero() {
   const popup = window.open('about:blank', 'litgraph-zotero', 'popup,width=640,height=760');
   if (!popup) { message('Allow popups and try Connect Zotero again.', true); return; }
   busy = true; controls(); let timer, finished = false;
-  const finish = async () => { if (finished) return; finished = true; clearInterval(timer); window.removeEventListener('message', onMessage); busy = false; await refresh(); };
+  const finish = async () => { if (finished) return; finished = true; clearInterval(timer); window.removeEventListener('message', onMessage); busy = false; await refresh(); if (connection?.connected && connection?.writeRequested && selected().some(r => !r.saved)) await save(); };
   const onMessage = event => {
     if (event.origin === location.origin && event.source === popup && event.data?.type === 'litgraph-zotero') {
-      message(event.data.success ? 'Zotero connected. Review references before saving.' : 'Zotero connection was not completed.', !event.data.success);
+      message(event.data.success ? 'Zotero connected.' : 'Zotero connection was not completed.', !event.data.success);
       finish();
     }
   };
@@ -203,3 +221,10 @@ window.addEventListener('litgraph-workspace', event => {
   if (event.detail === 'import' && !loaded) { loaded = true; refresh(); }
 });
 controls();
+
+$('ris').addEventListener('click', () => {
+  const blob = new Blob([referencesToRis(rows)], { type: 'application/x-research-info-systems;charset=utf-8' });
+  const url = URL.createObjectURL(blob), link = document.createElement('a');
+  link.href = url; link.download = 'extracted-references.ris'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});

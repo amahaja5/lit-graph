@@ -95,23 +95,23 @@
       <section id="citation-import" class="audit-workspace" aria-labelledby="import-title" hidden>
         <div class="audit-intro">
           <div><p class="audit-eyebrow">MANUSCRIPT → ZOTERO · TESTING PILOT</p><h2 id="import-title">Give your references a home.</h2>
-          <p>Upload a public or test manuscript, review its references, and gather the matches in a new Zotero collection.</p></div>
+          <p>Connect Zotero and upload a public or test manuscript. Clear matches are saved automatically; uncertain references stay here for review.</p></div>
           <span class="audit-badge">Public / test manuscripts only</span>
         </div>
         <div class="audit-columns">
           <section class="audit-input panel-card" aria-labelledby="import-input-title">
-            <h3 id="import-input-title">1. Extract references</h3>
+            <h3 id="import-input-title">1. Upload your manuscript</h3>
             <label for="import-file">Upload PDF, Word, or text</label>
             <input id="import-file" type="file" accept=".pdf,.docx,.txt,.md" />
             <p class="muted">Up to 3 MB, 100,000 characters, and 80 references. Include the bibliography. Scanned PDFs need OCR first.</p>
             <label for="import-text">Or paste a manuscript or bibliography</label>
             <textarea id="import-text" rows="9" maxlength="100000" placeholder="Paste text including the references…"></textarea>
-            <label class="import-consent"><input id="import-consent" type="checkbox" /> This is a public/test manuscript that I can send to Anthropic for extraction.</label>
-            <div class="audit-actions"><button id="import-extract" type="button" disabled>Extract references</button><button id="import-example" type="button" class="secondary">Load sample bibliography</button></div>
-            <p class="muted audit-disclosure">Extraction sends your manuscript to this server and Anthropic. Lookup sends reference strings or DOIs to Crossref. Only selected bibliographic records are saved to Zotero. This app does not persist your manuscript; unfinished work is lost on refresh. Baseten is not used in this pilot.</p>
+            <label class="import-consent"><input id="import-consent" type="checkbox" /> This is a public/test manuscript that I can send to the configured extraction provider.</label>
+            <div class="audit-actions"><button id="import-extract" type="button" disabled>Import to Zotero</button><button id="import-example" type="button" class="secondary">Load sample bibliography</button></div>
+            <p class="muted audit-disclosure">Extraction sends your manuscript to this server. PDFs go to GROBID when configured; other inputs use Anthropic. Lookup sends reference strings or DOIs to Crossref. Clear bibliographic matches are saved automatically to a new Zotero collection. This app does not persist your manuscript; unfinished work is lost on refresh.</p>
           </section>
           <section class="audit-input panel-card" aria-labelledby="import-connection-title">
-            <h3 id="import-connection-title">Test connection</h3>
+            <h3 id="import-connection-title">Connect Zotero</h3>
             <label for="import-token">Pilot access token</label>
             <input id="import-token" type="password" autocomplete="off" placeholder="Provided by the app administrator" />
             <button id="import-refresh" type="button" class="secondary">Check connection</button>
@@ -126,14 +126,14 @@
         </div>
         <p id="import-status" class="audit-status" role="status" aria-live="polite">Add a public/test manuscript to begin.</p>
         <section id="import-review" hidden aria-labelledby="import-review-title">
-          <div class="audit-section-heading"><div><h3 id="import-review-title">2. Review references and choose matches</h3><p id="import-summary" class="muted"></p></div>
-            <div class="audit-actions"><button id="import-lookup-all" type="button">Look up references</button><button id="import-stop" type="button" class="secondary" hidden>Stop after current reference</button><button id="import-download" type="button" class="secondary">Download inventory</button></div>
+          <div class="audit-section-heading"><div><h3 id="import-review-title">2. Import results</h3><p id="import-summary" class="muted"></p></div>
+            <div class="audit-actions"><button id="import-lookup-all" type="button">Look up references</button><button id="import-stop" type="button" class="secondary" hidden>Stop after current reference</button><button id="import-ris" type="button" class="secondary">Download extracted RIS</button><button id="import-download" type="button" class="secondary">Download inventory</button></div>
           </div>
           <p id="import-warnings" class="muted"></p>
           <div id="import-references" class="audit-results"></div>
           <div class="audit-actions import-add"><button id="import-add" type="button" class="secondary">Add missing reference</button></div>
           <section class="audit-input panel-card import-save" aria-labelledby="import-save-title">
-            <h3 id="import-save-title">3. Save selected matches</h3>
+            <h3 id="import-save-title">Finish unresolved references</h3>
             <label for="import-name">New Zotero collection name</label><input id="import-name" type="text" maxlength="200" placeholder="Manuscript references" />
             <p id="import-save-summary" class="muted">Choose matches above to save.</p>
             <button id="import-save" type="button" disabled>Create collection and save selected</button>

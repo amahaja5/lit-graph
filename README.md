@@ -499,11 +499,11 @@ The callback page removes its query parameters and sends only a success/failure 
 
 ## Citation import pilot
 
-Open `/#import` or choose **Import citations · Pilot**. This is a separate workflow from manuscript claim checking. It accepts public/test PDF, DOCX, TXT, Markdown, or pasted text, extracts up to 80 references, looks up Crossref metadata, and creates a new personal Zotero collection containing only manually selected matches.
+Open `/#import` or choose **Import citations · Pilot**. This is a separate workflow from manuscript claim checking. It accepts public/test PDF, DOCX, TXT, Markdown, or pasted text, extracts up to 80 references, looks up Crossref metadata, and automatically creates a personal Zotero collection for uniquely matched references; uncertain matches remain available for review.
 
-- The tester must confirm the manuscript can be sent to Anthropic. This pilot reuses `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`; it does not use Baseten or local inference.
+- The tester must confirm the manuscript can be sent to the configured extraction provider. This pilot reuses `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`; it does not use Baseten or local inference.
 - Uploads are capped at 3 MB / 100,000 extracted characters. Scans require OCR first. Extracted reference strings must be locatable in the manuscript.
-- Lookups send only DOI or reference strings to Crossref. DOI results and the top three bibliographic candidates are shown for review; none are selected automatically. Works outside Crossref remain unresolved. Entries can be corrected, retried, added manually, and downloaded as a JSON inventory.
+- Lookups send only DOI or reference strings to Crossref. DOI results and the top three bibliographic candidates are shown for review; unique matches with corroborating title and DOI, or title/author/year, are selected automatically. Works outside Crossref remain unresolved. Entries can be corrected, retried, added manually, and downloaded as a JSON inventory.
 - Use the existing `AUDIT_ACCESS_TOKEN` for the hosted pilot. Configure the existing Zotero OAuth variables above with a stable HTTPS origin and registered callback. A preview deployment must have its own matching origin/callback configuration; the production registration will not work on an arbitrary preview URL.
 - **Connect Zotero for import** requests personal-library write access, without notes/groups access. An existing read-only audit connection must be disconnected and reconnected from this tab. The audit sign-in still defaults to read-only. Zotero enforces the user's final granted permissions.
 - Saving reuses exact DOI matches in the library and preserves their metadata and other collections. New collection/item keys are stable within an import, making retries after uncertain responses safe. Conflicting item versions and partial write failures are reported rather than treated as success. Save/lookup run one reference at a time and can stop after the current request.
@@ -519,4 +519,30 @@ Shared local/Vercel API routes:
 
 The last two routes additionally require an OAuth connection and exact configured origin. The server never accepts an arbitrary upstream URL, API credential, or Zotero item payload from the browser.
 
-Pilot verification: connect with the access token, load the sample bibliography, confirm processing, extract, look up both references, manually select the correct matches, authorize Zotero write access, and save a named collection. Verify both references in Zotero. Retry a partial save to confirm completed records are retained. No live Zotero writes are performed by the automated tests.
+Pilot verification: connect with the access token, load the sample bibliography, confirm processing, extract, look up both references, authorize Zotero write access and import. Clear matches save automatically; review any remaining references. Verify both references in Zotero. Retry a partial save to confirm completed records are retained. No live Zotero writes are performed by the automated tests.
+
+
+### GROBID PDF bibliography extraction
+
+Set server-only `GROBID_API_URL` to the extraction wrapper base URL and
+`EXTRACTION_API_KEY` to its current key. Configure these in Vercel Production and
+Preview as well as local `.env`. Keep the key secret; update it when the wrapper
+restarts and rotates it, then redeploy the app to pick up the changed environment.
+
+With both values configured, PDF uploads in `/#import` use
+`POST /extract?mode=references` with multipart field `file` and `X-API-Key`.
+Non-PDF inputs still use Anthropic. Extraction requires the on-screen consent;
+failed GROBID requests are reported without silently sending the PDF to Anthropic.
+The existing 3 MB upload and 80-reference limits apply.
+
+TEI bibliography entries become structured Zotero item metadata in the inventory.
+**Download extracted RIS** exports every displayed reference for Zotero's File →
+Import, including entries without DOIs. This is unverified extracted metadata;
+review it in Zotero. Edits to DOI and reference text are reflected in RIS.
+The existing lookup/select/save flow still uses canonical Crossref metadata and
+automatically saves uniquely matched references, leaving uncertain candidates for review. It requires Zotero write authorization,
+which is entirely separate from the GROBID key.
+
+Reference strings are taken from `raw_reference` notes when present; otherwise
+those strings are reconstructed from parsed fields and marked accordingly.
+GROBID can miss or misclassify references, and scanned PDFs require OCR first.

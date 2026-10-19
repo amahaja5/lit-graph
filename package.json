@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "express": "^4.21.2",
+    "fast-xml-parser": "^5.11.2",
     "mammoth": "^1.12.2",
     "parse5": "^8.0.1",
     "pdfjs-dist": "^6.3.289"
