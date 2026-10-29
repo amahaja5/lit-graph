@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { TTLCache } from "../../lib/cache.js";
-import { createReviewService } from "../../lib/reviewService.js";
+import { TTLCache } from "../../lib/shared/cache.js";
+import { createReviewService } from "../../lib/review/reviewService.js";
 
 test("review service builds numbered references and falls back to abstract-only when HTML is unavailable", async () => {
   const service = createReviewService({

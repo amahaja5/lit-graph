@@ -1,20 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
-import {
-  createAuditService,
-  validateInventory,
-  validateAssessment,
-  selectPassages,
-} from "../../lib/auditService.js";
+import { createAuditService } from "../../lib/audit/auditService.js";
+import { validateInventory, validateAssessment } from "../../lib/audit/assessment.js";
+import { selectPassages } from "../../lib/audit/passages.js";
 import {
   createAuditSources,
   arxivId,
   matchReference,
-} from "../../lib/auditSources.js";
-import { readManuscript, extractPdf } from "../../lib/auditDocument.js";
-import { createAuditModel } from "../../lib/auditModel.js";
-import { requireAuditAccess } from "../../lib/auditAccess.js";
+} from "../../lib/audit/auditSources.js";
+import { readManuscript, extractPdf } from "../../lib/documents/auditDocument.js";
+import { createAuditModel } from "../../lib/models/auditModel.js";
+import { requireAuditAccess } from "../../lib/auth/auditAccess.js";
 import { createApp } from "../../server/src/index.js";
 
 const quote = "The model achieved 95.3 percent validity.";

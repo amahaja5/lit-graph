@@ -1,9 +1,9 @@
 // Explicit opt-in live check of the production adapter/workflow. Synthetic data only.
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
-import { createEvidenceJudgments } from '../../lib/evidenceJudgments.js';
-import { createHtmlReviewEvidenceProvider } from '../../lib/reviewEvidence.js';
-import { buildPassageCandidates, packPassages } from '../../lib/auditService.js';
+import { createEvidenceJudgments } from '../../lib/evidence/evidenceJudgments.js';
+import { createHtmlReviewEvidenceProvider } from '../../lib/review/reviewEvidence.js';
+import { buildPassageCandidates, packPassages } from "../../lib/audit/passages.js";
 import { retrieval, html } from './fixtures.mjs';
 
 if (!process.env.TYPESAFE_API_KEY) throw new Error('TYPESAFE_API_KEY is required');

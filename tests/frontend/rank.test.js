@@ -7,7 +7,7 @@ import {
   rankCandidates,
   selectCandidatesForMode,
   selectTopCandidates,
-} from "../../frontend/src/rank.js";
+} from "../../frontend/src/graph/rank.js";
 
 function candidate(id, { isInfluential = false, inf = 0, citations = 0, year = null } = {}) {
   return {

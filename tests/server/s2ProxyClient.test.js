@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 
-import { createS2ProxyClient } from "../../server/src/s2ProxyClient.js";
+import { createS2ProxyClient } from "../../lib/papers/s2ProxyClient.js";
 
 test("s2 client throttles outbound requests with a global min interval", async () => {
   const startedAt = [];

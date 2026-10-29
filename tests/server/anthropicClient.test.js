@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createAnthropicClient, validateStructuredReview } from "../../lib/anthropicClient.js";
+import { createAnthropicClient, validateStructuredReview } from "../../lib/review/anthropicClient.js";
 
 test("validateStructuredReview rejects citations outside the supplied reference set", () => {
   assert.throws(() => validateStructuredReview({

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { automaticMatch } from '../../frontend/src/importMatching.js';
-import { referencesToRis } from '../../frontend/src/ris.js';
+import { automaticMatch } from '../../frontend/src/citation-import/importMatching.js';
+import { referencesToRis } from '../../frontend/src/citation-import/ris.js';
 const candidate={doi:'10.1234/work',title:'A detailed study of sampling',year:'2020',item:{creators:[{lastName:'Doe'}]}};
 const reference={title:candidate.title,bibliography:'Doe. (2020). A detailed study of sampling.',doi:candidate.doi};
 test('automatic matching accepts exact DOI plus matching title, not mismatched metadata',()=>{

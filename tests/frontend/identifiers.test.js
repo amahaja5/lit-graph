@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildIdentifiersText, extractPaperIdentifiers } from "../../frontend/src/identifiers.js";
+import { buildIdentifiersText, extractPaperIdentifiers } from "../../frontend/src/review/identifiers.js";
 
 test("extractPaperIdentifiers uses explicit externalIds when available", () => {
   const row = extractPaperIdentifiers({

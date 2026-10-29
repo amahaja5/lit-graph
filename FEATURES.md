@@ -44,7 +44,7 @@ Why it matters for agents:
 
 Implementation:
 
-- resolver: [`server/src/paperIdResolver.js`](/Users/amahajan/src/lit-graph/server/src/paperIdResolver.js)
+- resolver: [`lib/papers/paperIdResolver.js`](/Users/amahajan/src/lit-graph/lib/papers/paperIdResolver.js)
 - entry route: [`server/src/index.js`](/Users/amahajan/src/lit-graph/server/src/index.js)
 
 Current behavior:
@@ -82,7 +82,7 @@ Why it matters for agents:
 Implementation:
 
 - client field set: [`frontend/src/apiClient.js`](/Users/amahajan/src/lit-graph/frontend/src/apiClient.js)
-- normalization: [`frontend/src/normalize.js`](/Users/amahajan/src/lit-graph/frontend/src/normalize.js)
+- normalization: [`frontend/src/graph/normalize.js`](/Users/amahajan/src/lit-graph/frontend/src/graph/normalize.js)
 
 Agent framing:
 
@@ -124,7 +124,7 @@ Implementation:
 
 - proxy routes: [`server/src/index.js`](/Users/amahajan/src/lit-graph/server/src/index.js)
 - field selection: [`frontend/src/apiClient.js`](/Users/amahajan/src/lit-graph/frontend/src/apiClient.js)
-- normalization: [`frontend/src/normalize.js`](/Users/amahajan/src/lit-graph/frontend/src/normalize.js)
+- normalization: [`frontend/src/graph/normalize.js`](/Users/amahajan/src/lit-graph/frontend/src/graph/normalize.js)
 
 Important current constraints:
 
@@ -156,8 +156,8 @@ Why it matters for agents:
 
 Implementation:
 
-- [`frontend/src/normalize.js`](/Users/amahajan/src/lit-graph/frontend/src/normalize.js)
-- [`frontend/src/graphStore.js`](/Users/amahajan/src/lit-graph/frontend/src/graphStore.js)
+- [`frontend/src/graph/normalize.js`](/Users/amahajan/src/lit-graph/frontend/src/graph/normalize.js)
+- [`frontend/src/graph/graphStore.js`](/Users/amahajan/src/lit-graph/frontend/src/graph/graphStore.js)
 
 Agent framing:
 
@@ -183,7 +183,7 @@ Why it matters for agents:
 
 Implementation:
 
-- [`frontend/src/rank.js`](/Users/amahajan/src/lit-graph/frontend/src/rank.js)
+- [`frontend/src/graph/rank.js`](/Users/amahajan/src/lit-graph/frontend/src/graph/rank.js)
 
 Agent framing:
 
@@ -201,7 +201,7 @@ Why it matters for agents:
 
 Implementation:
 
-- [`frontend/src/rank.js`](/Users/amahajan/src/lit-graph/frontend/src/rank.js)
+- [`frontend/src/graph/rank.js`](/Users/amahajan/src/lit-graph/frontend/src/graph/rank.js)
 
 Agent framing:
 
@@ -226,7 +226,7 @@ Why it matters for agents:
 
 Implementation:
 
-- [`frontend/src/graphStore.js`](/Users/amahajan/src/lit-graph/frontend/src/graphStore.js)
+- [`frontend/src/graph/graphStore.js`](/Users/amahajan/src/lit-graph/frontend/src/graph/graphStore.js)
 
 Capabilities already present:
 
@@ -255,8 +255,8 @@ Why it matters for agents:
 
 Implementation:
 
-- selection state: [`frontend/src/graphStore.js`](/Users/amahajan/src/lit-graph/frontend/src/graphStore.js)
-- review UI wiring: [`frontend/src/ui/reviewCart.js`](/Users/amahajan/src/lit-graph/frontend/src/ui/reviewCart.js)
+- selection state: [`frontend/src/graph/graphStore.js`](/Users/amahajan/src/lit-graph/frontend/src/graph/graphStore.js)
+- review UI wiring: [`frontend/src/review/reviewCart.js`](/Users/amahajan/src/lit-graph/frontend/src/review/reviewCart.js)
 
 Agent framing:
 
@@ -284,10 +284,10 @@ Why it matters for agents:
 
 Implementation:
 
-- shared review service: [`lib/reviewService.js`](/Users/amahajan/src/lit-graph/lib/reviewService.js)
-- evidence extraction: [`lib/reviewEvidence.js`](/Users/amahajan/src/lit-graph/lib/reviewEvidence.js)
-- model client: [`lib/anthropicClient.js`](/Users/amahajan/src/lit-graph/lib/anthropicClient.js)
-- UI wiring: [`frontend/src/ui/reviewDraft.js`](/Users/amahajan/src/lit-graph/frontend/src/ui/reviewDraft.js)
+- shared review service: [`lib/review/reviewService.js`](/Users/amahajan/src/lit-graph/lib/review/reviewService.js)
+- evidence extraction: [`lib/review/reviewEvidence.js`](/Users/amahajan/src/lit-graph/lib/review/reviewEvidence.js)
+- model client: [`lib/review/anthropicClient.js`](/Users/amahajan/src/lit-graph/lib/review/anthropicClient.js)
+- UI wiring: [`frontend/src/review/reviewDraft.js`](/Users/amahajan/src/lit-graph/frontend/src/review/reviewDraft.js)
 
 Agent framing:
 
@@ -313,7 +313,7 @@ Why it matters for agents:
 
 Implementation:
 
-- export logic: [`frontend/src/bibtex.js`](/Users/amahajan/src/lit-graph/frontend/src/bibtex.js)
+- export logic: [`frontend/src/review/bibtex.js`](/Users/amahajan/src/lit-graph/frontend/src/review/bibtex.js)
 - orchestration: [`frontend/src/main.js`](/Users/amahajan/src/lit-graph/frontend/src/main.js)
 
 Agent framing:
@@ -339,7 +339,7 @@ Why it matters for agents:
 
 Implementation:
 
-- identifier extraction: [`frontend/src/identifiers.js`](/Users/amahajan/src/lit-graph/frontend/src/identifiers.js)
+- identifier extraction: [`frontend/src/review/identifiers.js`](/Users/amahajan/src/lit-graph/frontend/src/review/identifiers.js)
 - orchestration: [`frontend/src/main.js`](/Users/amahajan/src/lit-graph/frontend/src/main.js)
 
 Agent framing:
@@ -364,7 +364,7 @@ Why it matters for agents:
 Implementation:
 
 - proxy app: [`server/src/index.js`](/Users/amahajan/src/lit-graph/server/src/index.js)
-- client/throttle: [`server/src/s2ProxyClient.js`](/Users/amahajan/src/lit-graph/server/src/s2ProxyClient.js)
+- client/throttle: [`lib/papers/s2ProxyClient.js`](/Users/amahajan/src/lit-graph/lib/papers/s2ProxyClient.js)
 
 Agent framing:
 

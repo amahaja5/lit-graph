@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createApp } from '../../server/src/index.js';
-import { handleCitationImport } from '../../lib/citationImportHandler.js';
+import { handleCitationImport } from '../../lib/citation-import/citationImportHandler.js';
 import auditHandler from '../../api/audit/[action].js';
 
 test('hosted import and audit routes reject anonymous and legacy bearer access before processing', async t => {

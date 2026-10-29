@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { computeGraphPanelHeight } from "../../frontend/src/graphSizing.js";
+import { computeGraphPanelHeight } from "../../frontend/src/graph/graphSizing.js";
 
 test("computeGraphPanelHeight uses the baseline viewport-driven height for smaller graphs", () => {
   const height = computeGraphPanelHeight(12, {

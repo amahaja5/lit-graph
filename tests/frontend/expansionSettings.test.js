@@ -5,7 +5,7 @@ import {
   DEFAULT_EXPANSION_PAPERS_PER_SIDE,
   MAX_EXPANSION_PAPERS_PER_SIDE,
   normalizeExpansionCount,
-} from "../../frontend/src/expansionSettings.js";
+} from "../../frontend/src/graph/expansionSettings.js";
 
 test("normalizeExpansionCount clamps to valid positive integer bounds", () => {
   assert.equal(normalizeExpansionCount("12"), 12);

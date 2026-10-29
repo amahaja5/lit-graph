@@ -7,7 +7,7 @@ import {
   buildBibtexDocument,
   extractOrBuildBibtexEntry,
   sortReviewNodesForBibtex,
-} from "../../frontend/src/bibtex.js";
+} from "../../frontend/src/review/bibtex.js";
 
 function node(paperId, { title = "Untitled", year = null, authors = [] } = {}) {
   return { paperId, title, year, authors: authors.map((name) => ({ name })) };

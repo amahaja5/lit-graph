@@ -7,7 +7,7 @@ import {
   normalizePaperRecord,
   toPaperNode,
   candidateToGraphLink,
-} from "../../frontend/src/normalize.js";
+} from "../../frontend/src/graph/normalize.js";
 
 test("normalizePaperRecord creates null-safe paper node shape", () => {
   const paper = normalizePaperRecord({

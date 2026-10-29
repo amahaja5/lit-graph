@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { createCitationImport, validateReferences, crossrefRecord, importKey } from '../../lib/citationImport.js';
-import { handleCitationImport } from '../../lib/citationImportHandler.js';
+import { createCitationImport, validateReferences, crossrefRecord, importKey } from '../../lib/citation-import/citationImport.js';
+import { handleCitationImport } from '../../lib/citation-import/citationImportHandler.js';
 import handler from '../../api/import/[action].js';
 import { createApp } from '../../server/src/index.js';
 

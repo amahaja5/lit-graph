@@ -119,7 +119,7 @@ The `:paperId(*)` route form is intentional so namespaced IDs with slashes, espe
 
 ### NBER Resolution
 
-`NBER:` inputs are resolved server-side in [`server/src/paperIdResolver.js`](/Users/amahajan/src/lit-graph/server/src/paperIdResolver.js).
+`NBER:` inputs are resolved server-side in [`lib/papers/paperIdResolver.js`](/Users/amahajan/src/lit-graph/lib/papers/paperIdResolver.js).
 
 Resolution behavior:
 
@@ -360,43 +360,34 @@ npm test
 frontend/
   index.html
   src/
+    main.js                 # graph composition and interaction
     apiClient.js
-    bibtex.js
-    graphRenderer.js
-    graphStore.js
-    identifiers.js
-    main.js
-    normalize.js
-    rank.js
-    styles.css
-    ui/
-      reviewCart.js
-      searchBar.js
-      sidecar.js
-server/
-  src/
-    cache.js
-    errors.js
-    index.js
-    paperIdResolver.js
-    s2ProxyClient.js
-tests/
-  frontend/
-    bibtex.test.js
-    graphStore.test.js
-    identifiers.test.js
-    normalize.test.js
-    rank.test.js
-  server/
-    paperIdResolver.test.js
-    proxy.test.js
-    s2ProxyClient.test.js
-.env.example
-FEATURES.md
-package.json
-README.md
-swagger.json
+    graph/                  # store, normalization, ranking, rendering, graph UI
+    review/                 # cart, generation controller/state, exports, review UI
+    audit/                  # manuscript workflow and report presentation
+    citation-import/        # import workflow, matching, RIS
+    shared/                 # cross-feature presentation helpers
+lib/
+  setup.js                  # shared service composition; request-scoped audit sources
+  papers/                   # Semantic Scholar client, resolution, HTTP boundary
+  review/                   # synthesis, evidence retrieval, request validation
+  audit/                    # orchestration, assessments, passages, sources, HTTP boundary
+  citation-import/          # extraction, matching and Zotero import
+  auth/                     # access control and Zotero OAuth
+  documents/                # manuscript and PDF parsing
+  evidence/                 # evidence selection and HTML candidates
+  models/                   # model adapters used across features
+  http/                     # body parsing, error responses and cancellation
+  shared/                   # cache and domain error type
+server/src/index.js         # Express composition and local startup
+api/                       # Vercel route adapters
+tests/                    # frontend and server regression tests
 ```
+
+Both hosts use the same paper and audit handlers. Feature code imports its owning
+module directly; there are no legacy re-export modules. Importing the Express app
+does not load `.env`; local startup does. See [architecture notes](ARCHITECTURE.md)
+for the refactoring findings and boundary contracts.
 
 ## Known Limitations
 

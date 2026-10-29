@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 
-import { TTLCache } from "../../server/src/cache.js";
-import { createS2ProxyClient } from "../../server/src/s2ProxyClient.js";
+import { TTLCache } from "../../lib/shared/cache.js";
+import { createS2ProxyClient } from "../../lib/papers/s2ProxyClient.js";
 import { createApp } from "../../server/src/index.js";
 
 function createMockUpstream() {

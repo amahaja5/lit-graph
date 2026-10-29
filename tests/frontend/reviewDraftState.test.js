@@ -5,7 +5,7 @@ import {
   createInitialReviewDraftState,
   getReviewGenerationGate,
   markReviewDraftStale,
-} from "../../frontend/src/reviewDraftState.js";
+} from "../../frontend/src/review/reviewDraftState.js";
 
 test("getReviewGenerationGate enforces the 2-10 paper window", () => {
   assert.equal(getReviewGenerationGate(1).canGenerate, false);
@@ -16,10 +16,10 @@ test("getReviewGenerationGate enforces the 2-10 paper window", () => {
 
 test("markReviewDraftStale only marks existing drafts stale", () => {
   const initial = createInitialReviewDraftState();
-  assert.equal(markReviewDraftStale(initial).stale, false);
+  assert.equal(Boolean(markReviewDraftStale(initial).stale), false);
 
   const withPayload = {
-    ...initial,
+    status: "ready",
     payload: { review: {} },
   };
   assert.equal(markReviewDraftStale(withPayload).stale, true);

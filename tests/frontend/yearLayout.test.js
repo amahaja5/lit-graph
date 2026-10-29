@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildYearHistogram, buildYearLayout, hasValidYear, yearToX } from "../../frontend/src/yearLayout.js";
+import { buildYearHistogram, buildYearLayout, hasValidYear, yearToX } from "../../frontend/src/graph/yearLayout.js";
 
 test("buildYearLayout spaces observed years evenly instead of compressing dense recent years", () => {
   const layout = buildYearLayout([1993, 1995, 2000, 2005, 2010, 2015, 2020, 2022, 2026], 1200);

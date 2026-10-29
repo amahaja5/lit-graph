@@ -25,7 +25,7 @@ flowchart TD
 
 ## 1. Shared server-side TypeSafe adapter
 
-Add `lib/typesafeClient.js`, created and injected through `lib/setup.js`. Use the documented HTTP interface or an official SDK after checking its current contract. The prototype proves the HTTP shape; it is not production client code.
+Add `lib/models/typesafeClient.js`, created and injected through `lib/setup.js`. Use the documented HTTP interface or an official SDK after checking its current contract. The prototype proves the HTTP shape; it is not production client code.
 
 Configuration to add to `.env.example` and README:
 
@@ -39,7 +39,7 @@ Cache judgments in the existing in-memory TTL style. Key by content hash, normal
 
 ## 2. Review HTML gate — first production slice
 
-Change `lib/reviewEvidence.js` and inject the adapter from `lib/reviewService.js`.
+Change `lib/review/reviewEvidence.js` and inject the adapter from `lib/review/reviewService.js`.
 
 1. Separate candidate extraction from evidence acceptance. Use a standard HTML parser to enumerate meaningful content regions and paragraph blocks, retaining document order and neighboring context. Remove executable/style/navigation structures deterministically. Avoid choosing only the first `article` and avoid discarding all text under 150 characters before evaluation.
 2. Bound fetched and parsed content. Process candidate groups within the documented state/question token limits, reserving space for metadata and rubric. Do not assume a character limit equals a token limit. Prioritize likely scholarly regions but record truncation; empty or inaccessible content remains unavailable.
@@ -54,7 +54,7 @@ This phase also requires meaningful parser tests: short findings, nested HTML, t
 
 ## 3. Audit passage reranking — second slice
 
-Refactor `selectPassages` in `lib/auditService.js` into candidate generation and selection, keeping a deterministic fallback. Add an injected asynchronous ranker between source resolution and packet construction.
+Refactor `selectPassages` in `lib/audit/auditService.js` into candidate generation and selection, keeping a deterministic fallback. Add an injected asynchronous ranker between source resolution and packet construction.
 
 1. Preserve page number, source SHA-256, exact normalized text, start/end offsets, and adjacent context for each candidate. Keep the existing 1,800-character windows / 1,400-character stride initially, then test sentence-aware boundaries separately.
 2. For a small document, score every candidate in bounded groups. For a large document, use a measured-recall shortlist combining lexical candidates with coverage across pages/sections. Do not feed only the old top eight. The experiment showed that this would eliminate the useful evidence before reranking.
@@ -65,7 +65,7 @@ Refactor `selectPassages` in `lib/auditService.js` into candidate generation and
 
 In `createAuditService`, await the ranker for each available source and pass the operation's remaining deadline. Stop/Resume retains its current behavior, with cancellation propagated where supported. Cache rankings by source hash, claim, candidate-generation version, model, and rubric.
 
-Add selection diagnostics to JSON exports through `frontend/src/auditState.js`; preserve existing reports and show only concise fallback/coverage notices in `frontend/src/ui/manuscriptAudit.js`. Add TypeSafe readiness separately to status; missing TypeSafe must not falsely mark Anthropic extraction as unconfigured. Update the data-flow notice to say selected passages/claims may also be sent to TypeSafe when the corresponding mode is active, including shadow mode.
+Add selection diagnostics to JSON exports through `frontend/src/audit/auditState.js`; preserve existing reports and show only concise fallback/coverage notices in `frontend/src/audit/manuscriptAudit.js`. Add TypeSafe readiness separately to status; missing TypeSafe must not falsely mark Anthropic extraction as unconfigured. Update the data-flow notice to say selected passages/claims may also be sent to TypeSafe when the corresponding mode is active, including shadow mode.
 
 ## 4. Citation verdicts — shadow evaluation only
 

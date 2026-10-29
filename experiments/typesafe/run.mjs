@@ -1,8 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { selectPassages } from '../../lib/auditService.js';
-import { extractReadableTextFromHtml } from '../../lib/reviewEvidence.js';
+import { selectPassages } from "../../lib/audit/passages.js";
+import { extractReadableTextFromHtml } from '../../lib/review/reviewEvidence.js';
 import { retrieval, html, relations } from './fixtures.mjs';
 
 const out = new URL('./results/', import.meta.url);

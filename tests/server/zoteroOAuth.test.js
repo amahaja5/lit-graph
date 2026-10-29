@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { once } from 'node:events';
-import { createZoteroOAuth, oauthHeader, zoteroMode } from '../../lib/zoteroOAuth.js';
+import { createZoteroOAuth, oauthHeader, zoteroMode } from '../../lib/auth/zoteroOAuth.js';
 import { createApp } from '../../server/src/index.js';
 import { getAuditService } from '../../lib/setup.js';
 import vercelHandler from '../../api/zotero/[action].js';
@@ -211,7 +211,7 @@ test('import sign-in explicitly requests write access while audit sign-in stays 
 });
 
 test('Zotero app login opens only the handshake and requires an allowed account', async () => {
-  const { requireAppAccess } = await import('../../lib/appAccess.js');
+  const { requireAppAccess } = await import('../../lib/auth/appAccess.js');
   const p = provider();
   const appEnv = { ...env, APP_AUTH_MODE: 'zotero', ZOTERO_ALLOWED_USERS: 'academic-1, avi.mahajan, avimhjn, amahajan10' };
   const oauth = createZoteroOAuth({ env: appEnv, fetchImpl: p.fetchImpl });

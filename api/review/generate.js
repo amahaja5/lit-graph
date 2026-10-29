@@ -1,7 +1,7 @@
-import { sendError } from "../../lib/errors.js";
-import { parseReviewGenerateRequestBody } from "../../lib/reviewRequest.js";
+import { sendError } from "../../lib/http/errors.js";
+import { parseReviewGenerateRequestBody } from "../../lib/review/reviewRequest.js";
 import { getReviewService } from "../../lib/setup.js";
-import { requestSignal } from '../../lib/requestSignal.js';
+import { requestSignal } from '../../lib/http/requestSignal.js';
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {

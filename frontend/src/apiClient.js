@@ -40,19 +40,7 @@ export const CITATION_FIELDS = [
   "venue",
 ].join(",");
 
-export const REFERENCE_FIELDS = [
-  "isInfluential",
-  "contexts",
-  "title",
-  "authors",
-  "year",
-  "abstract",
-  "citationCount",
-  "influentialCitationCount",
-  "referenceCount",
-  "url",
-  "venue",
-].join(",");
+export const REFERENCE_FIELDS = CITATION_FIELDS;
 
 export const DEFAULT_EXPANSION_LIMIT = 100;
 
@@ -67,7 +55,7 @@ export class ApiError extends Error {
 }
 
 export function createApiClient({ baseUrl = "" } = {}) {
-  return {
+  const client = {
     async fetchPaper(paperId) {
       return requestJson(buildUrl(`${baseUrl}/api/paper/${encodePathParam(paperId)}`, {
         fields: SEED_FIELDS,
@@ -104,8 +92,8 @@ export function createApiClient({ baseUrl = "" } = {}) {
 
     async fetchExpansion(paperId, options) {
       const [citations, references] = await Promise.all([
-        this.fetchCitations(paperId, options),
-        this.fetchReferences(paperId, options),
+        client.fetchCitations(paperId, options),
+        client.fetchReferences(paperId, options),
       ]);
       return { citations, references };
     },
@@ -124,6 +112,7 @@ export function createApiClient({ baseUrl = "" } = {}) {
       });
     },
   };
+  return client;
 }
 
 function buildUrl(pathname, query = {}) {

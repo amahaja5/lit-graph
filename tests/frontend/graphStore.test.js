@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { GraphStore } from "../../frontend/src/graphStore.js";
-import { toPaperNode } from "../../frontend/src/normalize.js";
+import { GraphStore } from "../../frontend/src/graph/graphStore.js";
+import { toPaperNode } from "../../frontend/src/graph/normalize.js";
 
 function makeCandidate({ relation, sourcePaperId, targetId, title, isInfluential = false }) {
   return {

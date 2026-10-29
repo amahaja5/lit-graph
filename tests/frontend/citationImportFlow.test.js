@@ -29,7 +29,7 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
     throw new Error('Unexpected route '+url);
   };
   try {
-    await import('../../frontend/src/ui/citationImport.js');
+    await import('../../frontend/src/citation-import/citationImport.js');
     get('import-consent').checked=true;
     get('import-text').value='A public bibliography';
     await get('import-refresh').listeners.click();
@@ -52,7 +52,7 @@ test('signed-out users see Zotero sign-in without fetching protected import stat
   const calls=[];
   globalThis.fetch=async url=>{calls.push(url);assert.equal(url,'/api/zotero/status');return Response.json({appLogin:true,configured:true,connected:false});};
   try {
-    await import('../../frontend/src/ui/citationImport.js?signed-out');
+    await import('../../frontend/src/citation-import/citationImport.js?signed-out');
     await get('import-refresh').listeners.click();
     assert.equal(get('import-zotero-connect').disabled,false);
     assert.equal(get('import-extract').disabled,true);

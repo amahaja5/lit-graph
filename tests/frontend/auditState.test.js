@@ -4,7 +4,7 @@ import {
   auditSummary,
   buildAuditExport,
   auditMarkdown,
-} from "../../frontend/src/auditState.js";
+} from "../../frontend/src/audit/auditState.js";
 
 test("partial audit exports account for all checked, failed and pending passages", () => {
   const inventory = {

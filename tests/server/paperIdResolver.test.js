@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createPaperIdResolver, extractNberPageMetadata, parseNberInput } from "../../server/src/paperIdResolver.js";
-import { ProxyHttpError } from "../../server/src/errors.js";
+import { createPaperIdResolver, extractNberPageMetadata, parseNberInput } from "../../lib/papers/paperIdResolver.js";
+import { ProxyHttpError } from "../../lib/shared/errors.js";
 
 test("parseNberInput recognizes working-paper shorthand and URLs", () => {
   const canonical = parseNberInput("NBER:w54321");

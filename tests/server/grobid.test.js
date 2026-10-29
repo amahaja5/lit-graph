@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { parseGrobidReferences, createGrobid } from '../../lib/grobid.js';
-import { createCitationImport } from '../../lib/citationImport.js';
+import { parseGrobidReferences, createGrobid } from '../../lib/citation-import/grobid.js';
+import { createCitationImport } from '../../lib/citation-import/citationImport.js';
 const xml = `<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><sourceDesc><biblStruct><monogr><title>Not a reference</title></monogr></biblStruct></sourceDesc></fileDesc></teiHeader><text><back><listBibl><biblStruct><analytic><title level="a">A &amp; B</title><author><persName><forename>Jane</forename><forename>Q.</forename><surname>Doe</surname></persName></author><idno type="DOI">10.1234/TEST</idno></analytic><monogr><title level="j">Journal</title><imprint><date when="2020"/><biblScope unit="volume">012</biblScope><biblScope unit="page" from="10" to="20"/></imprint></monogr><note type="raw_reference">Doe (2020). A &amp; B. Journal.</note></biblStruct></listBibl></back></text></TEI>`;
 const file = { name: 'paper.pdf', base64: Buffer.from('%PDF-1.4\nfixture').toString('base64') };
 const env = { GROBID_API_URL: 'https://extract.example', EXTRACTION_API_KEY: 'test-secret' };

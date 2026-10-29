@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { extractReadableTextFromHtml, resolveReviewSourceUrl } from "../../lib/reviewEvidence.js";
+import { extractReadableTextFromHtml, resolveReviewSourceUrl } from "../../lib/review/reviewEvidence.js";
 
 test("resolveReviewSourceUrl prioritizes arXiv, then NBER, then PubMed, then DOI", () => {
   assert.equal(resolveReviewSourceUrl({

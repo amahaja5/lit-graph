@@ -3,8 +3,8 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import { SYSTEM, digest, validateDataset, validatePrediction, baseline, score, aggregate } from './core.mjs';
-import { createAuditModel } from '../../lib/auditModel.js';
-import { readManuscript } from '../../lib/auditDocument.js';
+import { createAuditModel } from '../../lib/models/auditModel.js';
+import { readManuscript } from '../../lib/documents/auditDocument.js';
 export function args(argv) {
   const result = {};
   for (let i = 0; i < argv.length; i++) {
