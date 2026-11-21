@@ -4,6 +4,8 @@
 #
 # Usage:
 #   GCP_PROJECT=my-project deploy/cloud-run/deploy-grobid.sh
+#   # or deploy an image you already pushed (skips Cloud Build):
+#   GCP_PROJECT=my-project WRAPPER_IMAGE=REGION-docker.pkg.dev/PROJECT/REPO/wrapper:TAG deploy/cloud-run/deploy-grobid.sh
 set -euo pipefail
 
 : "${GCP_PROJECT:?Set GCP_PROJECT to your Google Cloud project ID.}"
@@ -12,11 +14,15 @@ REPO="${AR_REPO:-litgraph}"
 SERVICE="${GROBID_SERVICE:-grobid}"
 KEY_SECRET="${KEY_SECRET:-extraction-api-key}"
 TAG="${WRAPPER_TAG:-$(git rev-parse --short HEAD 2>/dev/null || date +%s)}"
-WRAPPER_IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT/$REPO/grobid-wrapper:$TAG"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "Building $WRAPPER_IMAGE"
-gcloud builds submit "$HERE/wrapper" --project "$GCP_PROJECT" --region "$REGION" --tag "$WRAPPER_IMAGE"
+if [[ -n "${WRAPPER_IMAGE:-}" ]]; then
+  echo "Using prebuilt $WRAPPER_IMAGE"
+else
+  WRAPPER_IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT/$REPO/grobid-wrapper:$TAG"
+  echo "Building $WRAPPER_IMAGE"
+  gcloud builds submit "$HERE/wrapper" --project "$GCP_PROJECT" --region "$REGION" --tag "$WRAPPER_IMAGE"
+fi
 
 RENDERED="$(mktemp)"
 trap 'rm -f "$RENDERED"' EXIT

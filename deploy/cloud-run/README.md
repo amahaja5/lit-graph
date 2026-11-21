@@ -59,6 +59,15 @@ Set a billing budget alert (Billing → Budgets & alerts) as a backstop.
 GCP_PROJECT="$PROJECT" deploy/cloud-run/deploy-grobid.sh
 ```
 
+To build locally instead of with Cloud Build (e.g. on an Apple Silicon Mac), push an amd64 image and pass it in:
+
+```bash
+TAG=$(git rev-parse --short HEAD)
+IMAGE=us-central1-docker.pkg.dev/$PROJECT/grobid/wrapper:$TAG
+docker buildx build --platform linux/amd64 -t "$IMAGE" --push deploy/cloud-run/wrapper
+GCP_PROJECT="$PROJECT" WRAPPER_IMAGE="$IMAGE" deploy/cloud-run/deploy-grobid.sh
+```
+
 Optional: `GCP_REGION` (default `us-central1`), `AR_REPO` (`litgraph`), `GROBID_SERVICE` (`grobid`), `KEY_SECRET` (`extraction-api-key`), `WRAPPER_TAG` (current git commit).
 
 Then set the following on Vercel, and in `.env` for local development:
