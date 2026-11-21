@@ -1,10 +1,11 @@
 import { automaticMatch } from './importMatching.js';
 import { referencesToRis } from './ris.js';
 import { installGrobidWarmup, warmGrobid } from './grobidWarmup.js';
+import { offerAuditHandoff } from '../shared/auditHandoff.js';
 const $ = id => document.getElementById(`import-${id}`);
 const element = (tag, value, className = '') => { const el = document.createElement(tag); el.textContent = value; el.className = className; return el; };
 let rows = [], busy = false, stop = false, ready = false, connection = null, loaded = false;
-let importId = crypto.randomUUID(), collection = null, owner = null;
+let importId = crypto.randomUUID(), collection = null, owner = null, manuscript = null;
 const selected = () => rows.filter(r => r.selected && r.candidates[r.choice]);
 function message(value, error = false) { $('status').textContent = value; $('status').classList.toggle('audit-error', error); }
 function controls() {
@@ -23,6 +24,8 @@ function controls() {
   $('ris').disabled = busy || !rows.length;
   $('summary').textContent = `${rows.length} references · ${rows.filter(r => r.lookedUp).length} looked up · ${rows.filter(r => r.saved).length} saved`;
   $('save-summary').textContent = `${rows.filter(r => r.saved).length} saved · ${rows.filter(r => !r.saved).length} remaining. Review any uncertain matches below.`;
+  $('next').hidden = !(collection && manuscript && rows.some(r => r.saved && r.zotero?.key));
+  $('check').disabled = busy;
   $('save').textContent = collection ? 'Save remaining selected matches' : 'Create collection and save selected';
   for (const card of document.querySelectorAll('[data-import-saved="true"]')) for (const el of card.querySelectorAll('input, textarea, select, button')) el.disabled = true;
 }
@@ -40,7 +43,7 @@ async function request(action, body, namespace = 'import') {
   return data;
 }
 function reset() {
-  rows = []; importId = crypto.randomUUID(); collection = null;
+  rows = []; importId = crypto.randomUUID(); collection = null; manuscript = null;
   $('review').hidden = true; $('references').replaceChildren(); $('open-collection').hidden = true; controls();
 }
 async function refresh() {
@@ -124,8 +127,10 @@ async function extract() {
   busy = true; stop = false; controls();
   message(/\.pdf$/i.test($('file').files[0]?.name || '') ? 'Importing references… The PDF extraction service can take up to a minute to start.' : 'Importing references…');
   try {
-    const data = await request('extract', await upload());
+    const payload = await upload();
+    const data = await request('extract', payload);
     reset();
+    manuscript = payload.file ? { file: payload.file } : { text: payload.text };
     rows = data.references.map(r => ({ ...r, candidates: [], choice: 0, selected: false, lookedUp: false, saved: false }));
     $('name').value = `${data.filename === 'Pasted manuscript' ? 'Manuscript' : data.filename.replace(/\.[^.]+$/, '')} references`.slice(0, 200);
     $('warnings').textContent = ['Extraction may miss or misread references. Correct entries and add omissions before lookup.', ...(data.warnings || [])].join(' ');
@@ -248,6 +253,18 @@ $('text').addEventListener('input', () => { $('file').value = ''; reset(); });
 $('lookup-all').addEventListener('click', () => runLookup(rows.filter(r => !r.saved && !r.lookedUp)));
 $('stop').addEventListener('click', () => { stop = true; message('Will stop after the current request completes.'); });
 $('save').addEventListener('click', save);
+// Hands the same manuscript and the saved Zotero items to the audit, which reads those exact items.
+$('check').addEventListener('click', () => {
+  offerAuditHandoff({
+    manuscript,
+    collection: { key: collection.key, name: $('name').value },
+    references: rows.filter(r => r.saved && r.zotero?.key).map(r => {
+      const candidate = r.candidates[r.choice] || {};
+      return { bibliography: r.bibliography, title: r.title || '', sourceTitle: candidate.title || '', doi: candidate.doi || r.doi || '', zoteroKey: r.zotero.key };
+    }),
+  });
+  location.hash = 'audit';
+});
 $('zotero-connect').addEventListener('click', connectZotero);
 $('zotero-disconnect').addEventListener('click', async () => {
   busy = true; controls();

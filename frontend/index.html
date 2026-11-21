@@ -54,6 +54,7 @@
             <input id="audit-file" type="file" accept=".pdf,.docx,.txt,.md" />
             <label for="audit-text">Or paste manuscript text</label>
             <textarea id="audit-text" rows="12" maxlength="100000" placeholder="Paste the manuscript, including in-text citations and references…"></textarea>
+            <p id="audit-handoff" class="muted" hidden></p>
             <label for="audit-collection">Find cited sources in Zotero</label>
             <div class="audit-zotero-connection">
               <p id="zotero-connection-status" role="status">Checking Zotero connection…</p>
@@ -135,6 +136,10 @@
             <p id="import-save-summary" class="muted">Choose matches above to save.</p>
             <button id="import-save" type="button" disabled>Create collection and save selected</button>
             <a id="import-open-collection" target="_blank" rel="noopener noreferrer" hidden>Open collection in Zotero</a>
+            <div id="import-next" hidden>
+              <p class="muted">Next, add PDFs in Zotero: select the collection's items, right-click, and choose <strong>Find Full Text</strong>. Attach any paywalled PDFs yourself, and let Zotero sync the files.</p>
+              <button id="import-check" type="button">Check citations against these sources</button>
+            </div>
             <p class="muted">Exact DOI matches already in your library are reused. Your other collections and existing item metadata are preserved.</p>
           </section>
         </section>

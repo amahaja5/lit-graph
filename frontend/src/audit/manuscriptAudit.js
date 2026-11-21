@@ -4,6 +4,8 @@ import {
   buildAuditExport,
   auditMarkdown,
 } from "./auditState.js";
+import { linkImportedSources } from "./importLink.js";
+import { takeAuditHandoff } from "../shared/auditHandoff.js";
 
 const $ = (id) => document.getElementById(id);
 const text = (tag, content, className = "") => {
@@ -18,6 +20,11 @@ let inventory = null,
   controller = null,
   modelReady = false;
 let zoteroStatus = null, zoteroBusy = false, zoteroIdentity = null;
+let handoff = null;
+function clearHandoff() {
+  handoff = null;
+  $("audit-handoff").hidden = true;
+}
 const inputs = () => [
   ...document.querySelectorAll(
     "#manuscript-audit input, #manuscript-audit textarea, #manuscript-audit select",
@@ -202,6 +209,7 @@ async function disconnectZotero() {
 }
 async function uploadPayload() {
   const file = $("audit-file").files[0];
+  if (!file && handoff?.manuscript?.file) return { file: handoff.manuscript.file };
   if (!file)
     return $("audit-arxiv").value.trim()
       ? { arxiv: $("audit-arxiv").value.trim() }
@@ -226,10 +234,11 @@ async function extract() {
     const data = await request("extract", await uploadPayload());
     inventory = data;
     results = {};
+    const linked = handoff ? linkImportedSources(data.references, handoff.references) : 0;
     renderInventory();
     renderResults();
     message(
-      `Found ${data.claims.length} cited passages and ${data.references.length} bibliography entries. Review the inventory before checking claims.`,
+      `Found ${data.claims.length} cited passages and ${data.references.length} bibliography entries.${handoff ? ` Linked ${linked} to the Zotero items you imported.` : ""} Review the inventory before checking claims.`,
     );
   } catch (e) {
     message(
@@ -257,7 +266,7 @@ function renderInventory() {
     details.append(
       text(
         "summary",
-        `${ref.label} · ${ref.title || "Unresolved reference"}${used.has(ref.id) ? "" : " · uncited"}`,
+        `${ref.label} · ${ref.title || "Unresolved reference"}${used.has(ref.id) ? "" : " · uncited"}${ref.zoteroKey ? " · linked to imported Zotero item" : ""}`,
       ),
     );
     details.append(
@@ -285,6 +294,7 @@ function renderInventory() {
         };
         ref.manuallyEdited = true;
         ref[field] = input.value.trim();
+        delete ref.zoteroKey; // An edited identity is no longer the imported item.
         details.querySelector("summary").textContent =
           `${ref.label} · ${ref.title || "Unresolved reference"}`;
         invalidateResults();
@@ -534,15 +544,18 @@ $("zotero-disconnect").addEventListener("click", disconnectZotero);
 $("audit-download").addEventListener("click", () => download());
 $("audit-download-json").addEventListener("click", () => download(true));
 $("audit-arxiv").addEventListener("input", () => {
+  clearHandoff();
   $("audit-file").value = "";
   invalidateInventory();
 });
 $("audit-text").addEventListener("input", () => {
+  clearHandoff();
   $("audit-arxiv").value = "";
   if ($("audit-file").files.length) $("audit-file").value = "";
   invalidateInventory();
 });
 $("audit-file").addEventListener("change", () => {
+  clearHandoff();
   $("audit-arxiv").value = "";
   invalidateInventory();
   if ($("audit-file").files.length)
@@ -550,6 +563,7 @@ $("audit-file").addEventListener("change", () => {
 });
 $("audit-collection").addEventListener("change", invalidateResults);
 $("audit-example").addEventListener("click", () => {
+  clearHandoff();
   $("audit-arxiv").value = "";
   $("audit-file").value = "";
   $("audit-text").value =
@@ -559,6 +573,26 @@ $("audit-example").addEventListener("click", () => {
     "Example loaded: one reported result and one deliberately altered number.",
   );
 });
+// Arriving from an import: same manuscript, its new collection, and the saved Zotero items.
+async function acceptHandoff() {
+  const next = takeAuditHandoff();
+  if (!next || busy) return;
+  $("audit-connection").dataset.loaded = 'true';
+  $("audit-arxiv").value = "";
+  $("audit-file").value = "";
+  $("audit-text").value = next.manuscript?.text || "";
+  invalidateInventory();
+  handoff = next;
+  $("audit-handoff").textContent = `Using the manuscript you just imported${next.manuscript?.file ? ` (${next.manuscript.file.name})` : ""}, with ${next.references.length} linked Zotero items from "${next.collection.name}".`;
+  $("audit-handoff").hidden = false;
+  await connect();
+  const select = $("audit-collection");
+  if (!Array.from(select.options).some(o => o.value === next.collection.key))
+    select.add(new Option(next.collection.name, next.collection.key));
+  select.value = next.collection.key;
+  if (modelReady && handoff === next) await extract();
+}
+window.addEventListener('litgraph-audit-handoff', acceptHandoff);
 window.addEventListener('litgraph-workspace', (event) => {
   if (event.detail === 'audit' && !$("audit-connection").dataset.loaded) {
     $("audit-connection").dataset.loaded = 'true';

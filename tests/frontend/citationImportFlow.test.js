@@ -14,7 +14,9 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
   const events={};
   const originals={document:globalThis.document,window:globalThis.window,Option:globalThis.Option,fetch:globalThis.fetch};
   globalThis.document={getElementById:get,createElement:()=>new Element(),createTextNode:text=>text,querySelectorAll:()=>[]};
-  globalThis.window={addEventListener:(name,fn)=>events[name]=fn};
+  const dispatched=[];
+  globalThis.window={addEventListener:(name,fn)=>events[name]=fn,dispatchEvent:e=>dispatched.push(e.type)};
+  globalThis.location={hash:''};
   globalThis.Option=class{constructor(label,value){this.label=label;this.value=value;}};
   const calls=[];
   const title='A detailed study of sampling';
@@ -39,7 +41,15 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
     assert.deepEqual(calls.filter(c=>!c.url.endsWith('/status')&&!c.url.endsWith('/warm')).map(c=>c.url),['/api/import/extract','/api/import/lookup','/api/import/lookup','/api/import/collection','/api/import/save']);
     assert.equal(calls.find(c=>c.url.endsWith('/save')).body.doi,'10.1234/one');
     assert.match(get('import-status').textContent,/Saved 1 references.*1 need review/);
-  } finally { Object.assign(globalThis,originals); }
+    assert.equal(get('import-next').hidden,false,'saved items offer the citation check');
+    get('import-check').listeners.click();
+    const { takeAuditHandoff } = await import('../../frontend/src/shared/auditHandoff.js');
+    const handoff=takeAuditHandoff();
+    assert.deepEqual(dispatched,['litgraph-audit-handoff']); assert.equal(location.hash,'audit');
+    assert.deepEqual(handoff.manuscript,{text:'A public bibliography'});
+    assert.equal(handoff.collection.key,'ABCD1234');
+    assert.deepEqual(handoff.references,[{bibliography:`Doe (2020). ${title}`,title,sourceTitle:title,doi:'10.1234/one',zoteroKey:'ITEM1234'}]);
+  } finally { Object.assign(globalThis,originals); delete globalThis.location; }
 });
 
 test('signed-out users see Zotero sign-in without fetching protected import status', async () => {
