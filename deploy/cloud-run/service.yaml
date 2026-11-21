@@ -1,0 +1,63 @@
+# Cloud Run service: GROBID sidecar + authenticated wrapper, scale-to-zero.
+# Rendered by deploy-grobid.sh, which fills in ${SERVICE}, ${WRAPPER_IMAGE} and ${KEY_SECRET}.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ${SERVICE}
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "2"
+        # Request-based billing: idle instances are not billed.
+        run.googleapis.com/cpu-throttling: "true"
+        run.googleapis.com/startup-cpu-boost: "true"
+        run.googleapis.com/execution-environment: gen2
+        # Start the wrapper only after GROBID's startup probe passes.
+        run.googleapis.com/container-dependencies: '{"api":["grobid"]}'
+    spec:
+      containerConcurrency: 4
+      timeoutSeconds: 300
+      containers:
+        # Ingress container: the only one reachable from outside.
+        - name: api
+          image: ${WRAPPER_IMAGE}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: GROBID_URL
+              value: http://localhost:8070
+            - name: EXTRACTION_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ${KEY_SECRET}
+                  key: latest
+          resources:
+            limits:
+              # 0.5 vCPU would force first-gen execution and concurrency 1 on Cloud Run.
+              cpu: "1"
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 48
+        # Sidecar: no ports, so no public ingress. Reached by the wrapper on localhost:8070.
+        - name: grobid
+          image: grobid/grobid:0.9.1-crf
+          resources:
+            limits:
+              cpu: "2"
+              memory: 8Gi
+          startupProbe:
+            httpGet:
+              path: /api/isalive
+              port: 8070
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 48

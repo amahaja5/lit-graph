@@ -1,0 +1,198 @@
+# LEGACY — superseded by deploy/cloud-run/ (scale-to-zero Cloud Run). Kept for reference only.
+# Known issues fixed in the Cloud Run wrapper: this version generates a random key at
+# startup and LOGS it in plain text; the key also changes on every restart.
+---
+version: "2.0"
+services:
+  grobid:
+    image: grobid/grobid:0.9.1-crf
+    expose:
+      - port: 8070
+        as: 8070
+        proto: tcp
+        to:
+          - global: false
+          - service: api
+  api:
+    image: python:3.12-slim
+    expose:
+      - port: 8000
+        as: 80
+        proto: tcp
+        to:
+          - global: true
+        http_options:
+          max_body_size: 53477376
+          read_timeout: 60000
+          send_timeout: 60000
+          next_cases:
+            - error
+            - timeout
+          next_tries: 3
+          next_timeout: 0
+    command:
+      - /bin/sh
+      - "-c"
+    args:
+      - >
+        set -eu
+
+        mkdir -p /app
+
+        cd /app
+
+        cat > requirements.txt <<'REQUIREMENTS'
+
+        fastapi==0.115.12
+
+        uvicorn==0.34.2
+
+        httpx==0.28.1
+
+        python-multipart==0.0.20
+
+        REQUIREMENTS
+
+        python -m pip install --no-cache-dir -r requirements.txt
+
+        cat > app.py <<'APP_SOURCE'
+
+        import os
+
+        import secrets
+
+        import hmac
+
+        import logging
+
+        from contextlib import asynccontextmanager
+
+        from typing import Literal
+
+
+        import httpx
+
+        from fastapi import FastAPI, File, HTTPException, UploadFile
+
+        from fastapi.responses import Response, JSONResponse
+
+
+        GROBID_URL = os.getenv("GROBID_URL",
+        "http://127.0.0.1:8070").rstrip("/")
+
+        MAX_BYTES = 50 * 1024 * 1024
+
+        API_KEY = secrets.token_urlsafe(32)
+
+
+
+        @asynccontextmanager
+
+        async def lifespan(app: FastAPI):
+            logging.getLogger("uvicorn.error").warning("EXTRACTION_API_KEY=%s", API_KEY)
+            async with httpx.AsyncClient(timeout=httpx.Timeout(50, connect=5)) as client:
+                app.state.client = client
+                yield
+
+
+        app = FastAPI(title="Local GROBID API", lifespan=lifespan)
+
+
+
+        @app.middleware("http")
+
+        async def authenticate(request, call_next):
+            if request.url.path == "/extract" and not hmac.compare_digest(
+                request.headers.get("x-api-key", ""), API_KEY
+            ):
+                return JSONResponse(status_code=401, content={"detail": "Invalid X-API-Key"})
+            return await call_next(request)
+
+
+        @app.get("/health")
+
+        async def health():
+            try:
+                result = await app.state.client.get(f"{GROBID_URL}/api/isalive", timeout=5)
+            except httpx.RequestError:
+                raise HTTPException(503, "GROBID is unavailable")
+            if result.status_code != 200 or result.text.strip().lower() != "true":
+                raise HTTPException(503, "GROBID is not ready")
+            return {"status": "ok", "grobid": "ready"}
+
+
+        @app.post("/extract", response_class=Response,
+                  responses={200: {"content": {"application/xml": {}}}})
+        async def extract(file: UploadFile = File(...),
+                          mode: Literal["fulltext", "header", "references"] = "fulltext",
+                          segment_sentences: bool = False):
+            try:
+                content = await file.read(MAX_BYTES + 1)
+            finally:
+                await file.close()
+            if len(content) > MAX_BYTES:
+                raise HTTPException(413, "PDF exceeds the 50 MiB limit")
+            if not content.startswith(b"%PDF-"):
+                raise HTTPException(415, "Upload a PDF file")
+            endpoint = {"fulltext": "processFulltextDocument", "header": "processHeaderDocument",
+                        "references": "processReferences"}[mode]
+            data = {"consolidateHeader": "0", "consolidateCitations": "0",
+                    "consolidateFunders": "0", "includeRawCitations": "1"}
+            if mode == "fulltext":
+                data["segmentSentences"] = str(int(segment_sentences))
+            try:
+                result = await app.state.client.post(
+                    f"{GROBID_URL}/api/{endpoint}", data=data,
+                    files={"input": (file.filename or "document.pdf", content, "application/pdf")},
+                    headers={"Accept": "application/xml"})
+            except httpx.TimeoutException:
+                raise HTTPException(504, "GROBID processing timed out")
+            except httpx.RequestError:
+                raise HTTPException(503, "GROBID is unavailable")
+            if result.status_code == 204:
+                return Response(status_code=204)
+            if result.status_code != 200:
+                status = 503 if result.status_code == 503 else 502
+                raise HTTPException(status, f"GROBID returned HTTP {result.status_code}")
+            return Response(content=result.content, media_type="application/xml")
+        APP_SOURCE
+
+        exec python -m uvicorn app:app --host 0.0.0.0 --port 8000
+    env:
+      - GROBID_URL=http://grobid:8070
+profiles:
+  compute:
+    grobid:
+      resources:
+        cpu:
+          units: 2
+        memory:
+          size: 8Gi
+        storage:
+          - size: 10Gi
+    api:
+      resources:
+        cpu:
+          units: 0.5
+        memory:
+          size: 1Gi
+        storage:
+          - size: 2Gi
+  placement:
+    akash:
+      pricing:
+        grobid:
+          denom: uact
+          amount: 100
+        api:
+          denom: uact
+          amount: 100
+deployment:
+  grobid:
+    akash:
+      profile: grobid
+      count: 1
+  api:
+    akash:
+      profile: api
+      count: 1
