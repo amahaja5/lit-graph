@@ -515,10 +515,19 @@ Pilot verification: connect with the access token, load the sample bibliography,
 
 ### GROBID PDF bibliography extraction
 
-Set server-only `GROBID_API_URL` to the extraction wrapper base URL and
-`EXTRACTION_API_KEY` to its current key. Configure these in Vercel Production and
-Preview as well as local `.env`. Keep the key secret; update it when the wrapper
-restarts and rotates it, then redeploy the app to pick up the changed environment.
+GROBID runs on Cloud Run as a scale-to-zero service (GROBID sidecar + authenticated
+wrapper). Setup, deployment and a local docker compose test are in
+[`deploy/cloud-run/README.md`](deploy/cloud-run/README.md); the previous Akash SDL is
+kept in `deploy/akash/` for reference.
+
+Set server-only `GROBID_API_URL` to the Cloud Run service URL and
+`EXTRACTION_API_KEY` to the value of the `extraction-api-key` secret. Configure these
+in Vercel Production and Preview as well as local `.env`. The key is stable across
+restarts; rotate it by adding a new secret version, redeploying, and updating Vercel.
+
+The app warms the service (via `GROBID_WARM_PATH`, default `/health`) when a
+signed-in user loads the app, signs in to Zotero, or opens the Import panel, so the
+30–90 s cold start usually finishes before Extract is clicked.
 
 With both values configured, PDF uploads in `/#import` use
 `POST /extract?mode=references` with multipart field `file` and `X-API-Key`.

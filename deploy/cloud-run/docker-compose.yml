@@ -1,0 +1,14 @@
+# Local test of the Cloud Run pair. Run: deploy/cloud-run/local-test.sh
+services:
+  grobid:
+    image: grobid/grobid:0.9.1-crf
+    # Not published to the host, mirroring the sidecar's lack of public ingress.
+  api:
+    build: ./wrapper
+    environment:
+      EXTRACTION_API_KEY: ${EXTRACTION_API_KEY:?set EXTRACTION_API_KEY}
+      GROBID_URL: http://grobid:8070
+    ports:
+      - "127.0.0.1:${WRAPPER_PORT:-8000}:8000"
+    depends_on:
+      - grobid
