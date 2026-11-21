@@ -1,29 +1,65 @@
 import { automaticMatch } from './importMatching.js';
 import { referencesToRis } from './ris.js';
 import { installGrobidWarmup, warmGrobid } from './grobidWarmup.js';
+import { offerAuditHandoff } from '../shared/auditHandoff.js';
 const $ = id => document.getElementById(`import-${id}`);
 const element = (tag, value, className = '') => { const el = document.createElement(tag); el.textContent = value; el.className = className; return el; };
 let rows = [], busy = false, stop = false, ready = false, connection = null, loaded = false;
-let importId = crypto.randomUUID(), collection = null, owner = null;
+let importId = crypto.randomUUID(), collection = null, owner = null, manuscript = null;
 const selected = () => rows.filter(r => r.selected && r.candidates[r.choice]);
 function message(value, error = false) { $('status').textContent = value; $('status').classList.toggle('audit-error', error); }
+// Every reference is in exactly one state; the list groups them so attention items come first.
+const STATE_LABEL = { review: 'Needs review', notfound: 'No match', error: 'Lookup failed', pending: 'Not looked up', ready: 'Ready to save', saved: 'Saved', skipped: 'Skipped' };
+const GROUP = { review: 'attention', notfound: 'attention', error: 'attention', pending: 'attention', ready: 'ready', saved: 'saved', skipped: 'skipped' };
+function stateOf(row) {
+  if (row.saved) return 'saved';
+  if (row.skipped) return 'skipped';
+  if (row.selected && row.candidates[row.choice]) return 'ready';
+  if (row.error) return 'error';
+  if (!row.lookedUp) return 'pending';
+  return row.candidates.length ? 'review' : 'notfound';
+}
+function counts() {
+  const c = { attention: 0, ready: 0, saved: 0, skipped: 0 };
+  for (const row of rows) c[GROUP[stateOf(row)]]++;
+  return c;
+}
+let filter = 'attention', showSetup = false, sourceName = '';
+function progress(done, total) {
+  const bar = $('progress');
+  bar.hidden = !total;
+  if (total) { bar.max = total; bar.value = done; }
+}
 function controls() {
-  for (const el of document.querySelectorAll('#citation-import input, #citation-import textarea, #citation-import select, #citation-import button')) el.disabled = busy;
+  for (const el of document.querySelectorAll('#citation-import input, #citation-import textarea, #citation-import select, #citation-import button'))
+    if (!el.closest('#import-filters')) el.disabled = busy;
+  const c = counts();
   $('extract').disabled = busy || !ready || !$('consent').checked;
   $('zotero-connect').disabled = busy || !connection?.configured || connection?.connected;
   $('zotero-connect').hidden = Boolean(connection?.connected);
   $('zotero-disconnect').hidden = !connection?.connected;
+  const collapsed = rows.length > 0 && !showSetup;
+  $('setup').hidden = collapsed;
+  $('loaded').hidden = !collapsed;
+  $('loaded-name').textContent = `${sourceName || 'Manuscript'} · ${rows.length} references`;
+  $('more').hidden = !rows.length;
   $('lookup-all').disabled = busy || !rows.some(r => !r.saved && !r.lookedUp);
   $('add').disabled = busy || rows.length >= 80;
-  $('save').disabled = busy || !connection?.connected || !connection?.writeRequested || !selected().some(r => !r.saved);
+  $('save').hidden = !c.ready || busy; // While matching or saving, Stop is the only action.
+  $('save').textContent = `Save ${c.ready} to Zotero`;
+  $('save').disabled = busy || !connection?.connected || !connection?.writeRequested || !c.ready;
+  $('name-field').hidden = Boolean(collection) || !c.ready || busy;
   $('name').disabled = busy || Boolean(collection);
   $('stop').hidden = !busy || !rows.length;
   $('stop').disabled = false;
+  if (!busy) progress(0, 0);
   $('download').disabled = !rows.length;
   $('ris').disabled = busy || !rows.length;
-  $('summary').textContent = `${rows.length} references · ${rows.filter(r => r.lookedUp).length} looked up · ${rows.filter(r => r.saved).length} saved`;
-  $('save-summary').textContent = `${rows.filter(r => r.saved).length} saved · ${rows.filter(r => !r.saved).length} remaining. Review any uncertain matches below.`;
-  $('save').textContent = collection ? 'Save remaining selected matches' : 'Create collection and save selected';
+  $('summary').textContent = rows.length
+    ? [`${c.saved} saved`, c.ready && `${c.ready} ready to save`, c.attention && `${c.attention} need attention`, c.skipped && `${c.skipped} skipped`].filter(Boolean).join(' · ') + (c.ready && !connection?.connected ? ' · sign in to Zotero to save' : '')
+    : '';
+  $('next').hidden = !(collection && manuscript && rows.some(r => r.saved && r.zotero?.key));
+  $('check').disabled = busy;
   for (const card of document.querySelectorAll('[data-import-saved="true"]')) for (const el of card.querySelectorAll('input, textarea, select, button')) el.disabled = true;
 }
 async function request(action, body, namespace = 'import') {
@@ -40,7 +76,7 @@ async function request(action, body, namespace = 'import') {
   return data;
 }
 function reset() {
-  rows = []; importId = crypto.randomUUID(); collection = null;
+  rows = []; importId = crypto.randomUUID(); collection = null; manuscript = null; filter = 'attention'; showSetup = false;
   $('review').hidden = true; $('references').replaceChildren(); $('open-collection').hidden = true; controls();
 }
 async function refresh() {
@@ -72,42 +108,87 @@ async function refresh() {
   }
   controls();
 }
+function link(doi) {
+  const a = element('a', doi);
+  a.href = `https://doi.org/${encodeURI(doi)}`; a.target = '_blank'; a.rel = 'noopener noreferrer';
+  return a;
+}
+function button(label, onClick, className = 'secondary') {
+  const b = element('button', label, className); b.type = 'button';
+  b.addEventListener('click', onClick);
+  return b;
+}
+function rowElement(row, index) {
+  const state = stateOf(row), chosen = row.candidates[row.choice];
+  const item = document.createElement('details');
+  item.className = `import-row ${state}`;
+  item.dataset.importSaved = String(Boolean(row.saved));
+  item.open = row.open ?? state === 'review';
+  item.addEventListener('toggle', () => { row.open = item.open; });
+  const summary = document.createElement('summary');
+  const shown = (state === 'ready' || state === 'saved') && chosen ? chosen : null;
+  summary.append(
+    element('span', STATE_LABEL[state], `import-state ${state}`),
+    element('span', String(index + 1), 'import-num'),
+    element('span', shown?.title || row.title || row.bibliography || 'Empty reference', 'import-row-title'),
+    element('span', shown ? [String(shown.authors || '').split(',')[0], shown.year].filter(Boolean).join(' · ') : '', 'import-row-meta muted'),
+  );
+  item.append(summary);
+
+  const body = element('div', '', 'import-row-body');
+  const original = element('div', '', 'import-original');
+  original.append(element('h4', 'In your manuscript'));
+  const refLabel = element('label', 'Reference');
+  const input = document.createElement('textarea'); input.rows = 3; input.maxLength = 4000; input.value = row.bibliography; refLabel.append(input);
+  const doiLabel = element('label', 'DOI (optional)');
+  const doi = document.createElement('input'); doi.type = 'text'; doi.maxLength = 300; doi.value = row.doi; doiLabel.append(doi);
+  const clear = () => Object.assign(row, { candidates: [], choice: 0, selected: false, lookedUp: false, error: '', skipped: false, open: true });
+  input.addEventListener('change', () => { row.bibliography = input.value; clear(); render(); });
+  doi.addEventListener('change', () => { row.doi = doi.value; clear(); render(); });
+  const actions = element('div', '', 'import-row-actions');
+  if (!row.saved) {
+    actions.append(button(row.lookedUp ? 'Look up again' : 'Look up', () => runLookup([row])));
+    actions.append(button(row.skipped ? 'Unskip' : 'Skip', () => { Object.assign(row, { skipped: !row.skipped, selected: false, open: row.skipped }); render(); }));
+  }
+  original.append(refLabel, doiLabel, actions);
+  if (row.error) original.append(element('p', row.error, 'audit-error'));
+
+  const matches = element('div', '', 'import-matches');
+  matches.append(element('h4', row.match === 'doi' ? 'DOI match' : 'Possible matches'));
+  if (!row.lookedUp) matches.append(element('p', 'Not looked up yet.', 'muted'));
+  else if (!row.candidates.length) matches.append(element('p', 'No match found. Correct the reference or DOI and look it up again, or skip it.', 'muted'));
+  row.candidates.forEach((candidate, i) => {
+    const isChosen = row.selected && row.choice === i;
+    const card = element('div', '', `import-match${isChosen ? ' chosen' : ''}`);
+    card.append(element('strong', candidate.title), element('p', `${candidate.authors || 'Authors unavailable'} · ${candidate.year || 'Year unavailable'}`), element('p', candidate.venue || 'Venue unavailable', 'muted'), link(candidate.doi));
+    if (!row.saved) card.append(button(isChosen ? 'Accepted' : 'Accept', () => {
+      Object.assign(row, isChosen ? { selected: false } : { choice: i, selected: true, skipped: false, open: false });
+      render();
+    }, isChosen ? 'secondary' : ''));
+    matches.append(card);
+  });
+  body.append(original, matches);
+  item.append(body);
+  return item;
+}
 function render() {
   $('review').hidden = false;
-  const root = $('references'); root.replaceChildren();
-  for (const [index, row] of rows.entries()) {
-    let card = element('article', '', 'audit-claim import-reference');
-    card.dataset.importSaved = String(Boolean(row.saved));
-    const heading = element('summary', `Reference ${index + 1}${row.saved ? ' · Saved to Zotero' : ''}`);
-    if (row.saved) { card = element('details', '', 'audit-claim import-reference'); card.dataset.importSaved = 'true'; card.append(heading); }
-    else card.append(element('h4', `Reference ${index + 1}`));
-    const label = element('label', 'Original reference');
-    const input = document.createElement('textarea'); input.rows = 3; input.maxLength = 4000; input.value = row.bibliography; label.append(input); card.append(label);
-    const doiLabel = element('label', 'DOI (optional; edit to correct the lookup)');
-    const doi = document.createElement('input'); doi.type = 'text'; doi.maxLength = 300; doi.value = row.doi; doiLabel.append(doi); card.append(doiLabel);
-    const clear = () => { row.candidates = []; row.choice = 0; row.selected = false; row.lookedUp = false; row.error = ''; };
-    input.addEventListener('change', () => { row.bibliography = input.value; clear(); render(); });
-    doi.addEventListener('change', () => { row.doi = doi.value; clear(); render(); });
-    const lookup = element('button', row.lookedUp ? 'Look up again' : 'Look up this reference', 'secondary'); lookup.type = 'button';
-    lookup.addEventListener('click', () => runLookup([row])); card.append(lookup);
-    if (row.error) card.append(element('p', row.error, 'audit-error'));
-    if (row.lookedUp && !row.candidates.length) card.append(element('p', 'No Crossref match found. Correct the reference or DOI and retry, or leave it unresolved.', 'muted'));
-    if (row.candidates.length) {
-      const candidateLabel = element('label', row.match === 'doi' ? 'DOI lookup result — confirm it matches the original' : 'Possible matches — choose the correct work');
-      const select = document.createElement('select');
-      row.candidates.forEach((c, i) => select.add(new Option(`${c.title} (${c.year || 'year unknown'})`, String(i))));
-      select.value = String(row.choice); candidateLabel.append(select); card.append(candidateLabel);
-      select.addEventListener('change', () => { row.choice = Number(select.value); row.selected = false; render(); });
-      const candidate = row.candidates[row.choice];
-      const details = element('div', '', 'import-candidate');
-      details.append(element('strong', candidate.title), element('p', `${candidate.authors || 'Authors unavailable'} · ${candidate.year || 'Year unavailable'}`), element('p', candidate.venue || 'Venue unavailable', 'muted'));
-      const link = element('a', candidate.doi); link.href = `https://doi.org/${encodeURI(candidate.doi)}`; link.target = '_blank'; link.rel = 'noopener noreferrer'; details.append(link); card.append(details);
-      const choose = element('label', '', 'import-choice'); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = row.selected;
-      checkbox.addEventListener('change', () => { row.selected = checkbox.checked; controls(); });
-      choose.append(checkbox, document.createTextNode('Include this match in the collection.')); card.append(choose);
-    }
-    root.append(card);
+  const c = counts();
+  const chips = $('filters'); chips.replaceChildren();
+  for (const [key, label] of [['attention', 'Needs attention'], ['ready', 'Ready to save'], ['saved', 'Saved'], ['skipped', 'Skipped'], ['all', 'All']]) {
+    const n = key === 'all' ? rows.length : c[key];
+    if (!n && key !== 'attention' && key !== 'all' && filter !== key) continue;
+    const chip = button(`${label} (${n})`, () => { filter = key; render(); });
+    chip.setAttribute('aria-pressed', String(filter === key));
+    chips.append(chip);
   }
+  const root = $('references'); root.replaceChildren();
+  let shown = 0;
+  for (const [index, row] of rows.entries()) {
+    if (filter !== 'all' && GROUP[stateOf(row)] !== filter) continue;
+    root.append(rowElement(row, index)); shown++;
+  }
+  if (!shown) root.append(element('p', filter === 'attention' ? 'Nothing needs your attention.' : 'No references in this view.', 'muted import-empty'));
   controls();
 }
 async function upload() {
@@ -124,8 +205,11 @@ async function extract() {
   busy = true; stop = false; controls();
   message(/\.pdf$/i.test($('file').files[0]?.name || '') ? 'Importing references… The PDF extraction service can take up to a minute to start.' : 'Importing references…');
   try {
-    const data = await request('extract', await upload());
+    const payload = await upload();
+    const data = await request('extract', payload);
     reset();
+    manuscript = payload.file ? { file: payload.file } : { text: payload.text };
+    sourceName = data.filename === 'Pasted manuscript' ? 'Pasted text' : data.filename;
     rows = data.references.map(r => ({ ...r, candidates: [], choice: 0, selected: false, lookedUp: false, saved: false }));
     $('name').value = `${data.filename === 'Pasted manuscript' ? 'Manuscript' : data.filename.replace(/\.[^.]+$/, '')} references`.slice(0, 200);
     $('warnings').textContent = ['Extraction may miss or misread references. Correct entries and add omissions before lookup.', ...(data.warnings || [])].join(' ');
@@ -185,7 +269,7 @@ async function runLookup(list, automatic = false) {
         const choice = automaticMatch(row, row.candidates);
         if (choice >= 0) Object.assign(row, { choice, selected: true });
       }
-      if (!failure) message(`Matching references… ${++done} of ${list.length}`);
+      if (!failure) { message(`Matching references… ${++done} of ${list.length}`); progress(done, list.length); }
     } catch (error) { row.error = error.message; failure ??= error; }
     render();
   };
@@ -208,8 +292,10 @@ async function save() {
     message('Saving to Zotero…');
     collection ||= await request('collection', { importId, name: $('name').value });
     $('open-collection').href = collection.url; $('open-collection').hidden = false;
+    let savedCount = 0;
     for (const row of pending) {
       if (stop) break;
+      message(`Saving to Zotero… ${savedCount + 1} of ${pending.length}`); progress(savedCount++, pending.length);
 
       const result = await request('save', { importId, doi: row.candidates[row.choice].doi });
       row.saved = true; row.zotero = result; render();
@@ -243,11 +329,38 @@ async function connectZotero() {
 $('extract').addEventListener('click', extract);
 $('refresh').addEventListener('click', async () => { busy = true; controls(); try { await refresh(); } finally { busy = false; controls(); } });
 $('consent').addEventListener('change', controls);
-$('file').addEventListener('change', () => { $('text').value = ''; reset(); message('File selected. Confirm it is a public/test manuscript, then extract references.'); });
+$('file').addEventListener('change', () => {
+  const file = $('file').files[0];
+  $('text').value = ''; reset();
+  $('file-name').textContent = file ? file.name : 'PDF, Word or text · up to 3 MB · include the bibliography';
+  if (file) message('File selected. Confirm it is a public/test manuscript, then import.');
+});
+// Drag and drop onto the upload area.
+for (const type of ['dragenter', 'dragover']) $('drop').addEventListener(type, event => { event.preventDefault(); $('drop').classList.add('dragging'); });
+for (const type of ['dragleave', 'drop']) $('drop').addEventListener(type, () => $('drop').classList.remove('dragging'));
+$('drop').addEventListener('drop', event => {
+  event.preventDefault();
+  if (!event.dataTransfer?.files?.length) return;
+  $('file').files = event.dataTransfer.files;
+  $('file').dispatchEvent(new Event('change'));
+});
+$('change').addEventListener('click', () => { showSetup = true; controls(); });
 $('text').addEventListener('input', () => { $('file').value = ''; reset(); });
 $('lookup-all').addEventListener('click', () => runLookup(rows.filter(r => !r.saved && !r.lookedUp)));
 $('stop').addEventListener('click', () => { stop = true; message('Will stop after the current request completes.'); });
 $('save').addEventListener('click', save);
+// Hands the same manuscript and the saved Zotero items to the audit, which reads those exact items.
+$('check').addEventListener('click', () => {
+  offerAuditHandoff({
+    manuscript,
+    collection: { key: collection.key, name: $('name').value },
+    references: rows.filter(r => r.saved && r.zotero?.key).map(r => {
+      const candidate = r.candidates[r.choice] || {};
+      return { bibliography: r.bibliography, title: r.title || '', sourceTitle: candidate.title || '', doi: candidate.doi || r.doi || '', zoteroKey: r.zotero.key };
+    }),
+  });
+  location.hash = 'audit';
+});
 $('zotero-connect').addEventListener('click', connectZotero);
 $('zotero-disconnect').addEventListener('click', async () => {
   busy = true; controls();
@@ -256,16 +369,26 @@ $('zotero-disconnect').addEventListener('click', async () => {
   finally { busy = false; controls(); }
 });
 $('example').addEventListener('click', () => {
-  reset(); $('file').value = '';
+  reset(); $('file').value = ''; $('paste').open = true;
   $('text').value = 'Public sample bibliography\n\nReferences\nWatson, J. D., and Crick, F. H. C. (1953). Molecular Structure of Nucleic Acids: A Structure for Deoxyribose Nucleic Acid. Nature, 171, 737–738. https://doi.org/10.1038/171737a0\n\nShannon, C. E. (1948). A Mathematical Theory of Communication. Bell System Technical Journal, 27(3), 379–423. https://doi.org/10.1002/j.1538-7305.1948.tb01338.x';
   message('Sample loaded. Confirm processing consent, then extract references.');
 });
-$('add').addEventListener('click', () => { rows.push({ id: crypto.randomUUID(), bibliography: '', doi: '', candidates: [], choice: 0, selected: false }); render(); $('references').lastElementChild.querySelector('textarea').focus(); });
+$('add').addEventListener('click', () => {
+  rows.push({ id: crypto.randomUUID(), bibliography: '', doi: '', candidates: [], choice: 0, selected: false, open: true });
+  filter = 'attention'; $('more').open = false; render();
+  $('references').lastElementChild?.querySelector('textarea')?.focus();
+});
 $('download').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ schemaVersion: 1, references: rows, collection }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = 'citation-import.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 installGrobidWarmup();
+function measureTopbar() {
+  const topbar = document.querySelector?.('.topbar');
+  if (topbar) document.documentElement.style.setProperty('--topbar-h', `${topbar.offsetHeight}px`);
+}
+measureTopbar();
+window.addEventListener('resize', measureTopbar);
 window.addEventListener('litgraph-workspace', event => {
   if (event.detail === 'import' && !loaded) { loaded = true; refresh(); }
 });

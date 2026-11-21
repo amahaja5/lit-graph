@@ -5,6 +5,7 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
   class Element {
     constructor() { this.value='';this.files=[];this.checked=false;this.dataset={};this.children=[];this.listeners={};this.classList={toggle(){}}; }
     addEventListener(name,fn){this.listeners[name]=fn;}
+    setAttribute(name,value){this[name]=String(value);}
     append(...nodes){this.children.push(...nodes);}
     replaceChildren(...nodes){this.children=nodes;}
     add(node){this.children.push(node);}
@@ -14,7 +15,9 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
   const events={};
   const originals={document:globalThis.document,window:globalThis.window,Option:globalThis.Option,fetch:globalThis.fetch};
   globalThis.document={getElementById:get,createElement:()=>new Element(),createTextNode:text=>text,querySelectorAll:()=>[]};
-  globalThis.window={addEventListener:(name,fn)=>events[name]=fn};
+  const dispatched=[];
+  globalThis.window={addEventListener:(name,fn)=>events[name]=fn,dispatchEvent:e=>dispatched.push(e.type)};
+  globalThis.location={hash:''};
   globalThis.Option=class{constructor(label,value){this.label=label;this.value=value;}};
   const calls=[];
   const title='A detailed study of sampling';
@@ -39,7 +42,15 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
     assert.deepEqual(calls.filter(c=>!c.url.endsWith('/status')&&!c.url.endsWith('/warm')).map(c=>c.url),['/api/import/extract','/api/import/lookup','/api/import/lookup','/api/import/collection','/api/import/save']);
     assert.equal(calls.find(c=>c.url.endsWith('/save')).body.doi,'10.1234/one');
     assert.match(get('import-status').textContent,/Saved 1 references.*1 need review/);
-  } finally { Object.assign(globalThis,originals); }
+    assert.equal(get('import-next').hidden,false,'saved items offer the citation check');
+    get('import-check').listeners.click();
+    const { takeAuditHandoff } = await import('../../frontend/src/shared/auditHandoff.js');
+    const handoff=takeAuditHandoff();
+    assert.deepEqual(dispatched,['litgraph-audit-handoff']); assert.equal(location.hash,'audit');
+    assert.deepEqual(handoff.manuscript,{text:'A public bibliography'});
+    assert.equal(handoff.collection.key,'ABCD1234');
+    assert.deepEqual(handoff.references,[{bibliography:`Doe (2020). ${title}`,title,sourceTitle:title,doi:'10.1234/one',zoteroKey:'ITEM1234'}]);
+  } finally { Object.assign(globalThis,originals); delete globalThis.location; }
 });
 
 test('signed-out users see Zotero sign-in without fetching protected import status', async () => {
@@ -68,6 +79,7 @@ test('lookups run in parallel within reported Crossref limits and recover from a
   class Element {
     constructor() { this.value='';this.files=[];this.checked=false;this.dataset={};this.children=[];this.listeners={};this.classList={toggle(){}}; }
     addEventListener(name,fn){this.listeners[name]=fn;}
+    setAttribute(name,value){this[name]=String(value);}
     append(...nodes){this.children.push(...nodes);}
     replaceChildren(...nodes){this.children=nodes;}
     add(node){this.children.push(node);}
@@ -102,7 +114,16 @@ test('lookups run in parallel within reported Crossref limits and recover from a
     await get('import-extract').listeners.click();
     assert.ok(maxInFlight>=2,`expected parallel lookups, saw ${maxInFlight}`);
     assert.equal(lookups,7,'six references plus one retry after the 429');
+    // Clear matches leave the default "Needs attention" view; chips, summary and the bar report them.
+    const chips=()=>elements.get('import-filters').children.map(c=>c.textContent);
+    assert.deepEqual(chips(),['Needs attention (0)','Ready to save (6)','All (6)']);
+    assert.deepEqual(elements.get('import-references').children.map(c=>c.textContent),['Nothing needs your attention.']);
+    assert.match(get('import-summary').textContent,/6 ready to save · sign in to Zotero to save/);
+    assert.equal(get('import-save').textContent,'Save 6 to Zotero'); assert.equal(get('import-save').disabled,true);
+    elements.get('import-filters').children.find(c=>c.textContent==='All (6)').listeners.click();
     assert.equal(elements.get('import-references').children.length,6);
+    assert.equal(get('import-setup').hidden,true,'the upload form collapses once references are loaded');
+    assert.equal(get('import-loaded-name').textContent,'paper.txt · 6 references');
     assert.doesNotMatch(get('import-status').textContent,/busy|failed/i);
     assert.match(get('import-status').textContent,/Connect Zotero to finish/);
   } finally { Object.assign(globalThis,originals); }

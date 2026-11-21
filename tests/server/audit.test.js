@@ -1,3 +1,4 @@
+import { parseAuditCheckRequest } from "../../lib/audit/request.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
@@ -438,4 +439,38 @@ test("a single title match without author/year evidence remains unverified", asy
   );
   assert.equal(result.status, "unavailable");
   assert.match(result.warnings.join(" "), /author and year/);
+});
+
+test("a reference linked by an import reads that exact Zotero item without re-matching its title", async () => {
+  const seen = [];
+  const linkedRef = { id: "R9", label: "[9]", title: "A differently worded title", bibliography: "[9] Someone. A differently worded title.", zoteroKey: "ABCD2345" };
+  const sources = createAuditSources({
+    mode: "web", apiKey: "k", userId: "123",
+    fetchImpl: async (url) => {
+      const path = new URL(url).pathname;
+      seen.push(path);
+      if (path === "/users/123/items/ABCD2345") return Response.json({ key: "ABCD2345", data: { itemType: "journalArticle", title: "Canonical Crossref Title", creators: [{ lastName: "Other" }], date: "2001" } });
+      if (path === "/users/123/items/ABCD2345/children") return Response.json([{ key: "PDF23456", data: { contentType: "application/pdf", url: "" } }]);
+      if (path === "/users/123/items/PDF23456/file") return new Response(pdfBytes());
+      return Response.json([]);
+    },
+  });
+  const result = await sources.resolve(linkedRef, "JZPG5AHC");
+  assert.equal(result.status, "available");
+  assert.equal(result.itemKey, "ABCD2345");
+  assert.match(result.retrieval, /imported item/);
+  assert.ok(!seen.some((p) => p.includes("/collections/")), "no collection search when linked");
+});
+test("a linked Zotero item that no longer exists falls back to searching the library", async () => {
+  const sources = createAuditSources({
+    mode: "web", apiKey: "k", userId: "123",
+    fetchImpl: async (url) => new URL(url).pathname.endsWith("/items/ABCD2345") ? new Response("", { status: 404 }) : Response.json([]),
+  });
+  const result = await sources.resolve({ ...ref, arxiv: "", bibliography: "[1] Jindal and Ju. Small Molecular Grammar.", zoteroKey: "ABCD2345" }, "JZPG5AHC");
+  assert.equal(result.status, "unavailable");
+  assert.match(result.warnings.join(" "), /imported Zotero item is unavailable/);
+});
+test("audit check requests reject malformed linked Zotero keys", () => {
+  assert.throws(() => parseAuditCheckRequest({ claim, references: [{ ...ref, zoteroKey: "../items" }] }), /Invalid reference record/);
+  assert.equal(parseAuditCheckRequest({ claim, references: [{ ...ref, zoteroKey: "ABCD2345" }] }).refs[0].zoteroKey, "ABCD2345");
 });
