@@ -535,6 +535,12 @@ Non-PDF inputs still use Anthropic. Extraction requires the on-screen consent;
 failed GROBID requests are reported without silently sending the PDF to Anthropic.
 The existing 3 MB upload and 80-reference limits apply.
 
+Reference lookup uses Crossref, except arXiv references (`arXiv:…`, `arxiv.org/abs/…`,
+`10.48550/arXiv.…`), which resolve exactly through DataCite and are saved as Zotero
+preprints. Set `CROSSREF_MAILTO` to an operator contact address to join Crossref's
+polite pool (3 searches/s, 3 concurrent, versus 1/s and 1). The browser paces and
+parallelises lookups to the limits Crossref reports, and retries 429s with backoff.
+
 TEI bibliography entries become structured Zotero item metadata in the inventory.
 **Download extracted RIS** exports every displayed reference for Zotero's File →
 Import, including entries without DOIs. This is unverified extracted metadata;
