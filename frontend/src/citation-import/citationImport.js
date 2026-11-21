@@ -32,7 +32,11 @@ async function request(action, body, namespace = 'import') {
   const response = await fetch(`/api/${namespace}/${action}`, { method: body === undefined ? 'GET' : 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) });
   let data;
   try { data = await response.json(); } catch { throw new Error(`The server returned an unreadable response (${response.status}). Retry this step.`); }
-  if (!response.ok) throw new Error(data?.error?.message || `Request failed (${response.status}).`);
+  if (!response.ok) {
+    const error = new Error(data?.error?.message || `Request failed (${response.status}).`);
+    error.status = response.status; error.retryAfterSeconds = data?.error?.retryAfterSeconds;
+    throw error;
+  }
   return data;
 }
 function reset() {
@@ -134,28 +138,65 @@ async function extract() {
     else if (completed) message('References matched. Connect Zotero to finish the import.');
   }
 }
+// Lookups are paced to the limits Crossref reports (public pool: 1 search/s, one at a time;
+// polite pool: 3/s, three at a time) and retried with backoff when the provider answers 429.
+const pace = { concurrency: 1, spacingMs: 1100, nextAt: 0 };
+const MAX_LOOKUP_RETRIES = 3;
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function nextSlot() {
+  const now = Date.now(), at = Math.max(now, pace.nextAt);
+  pace.nextAt = at + pace.spacingMs;
+  if (at > now) await sleep(at - now);
+}
+function learnPace(limit) {
+  const rate = Number(limit?.limit), intervalMs = Number(limit?.intervalMs), concurrency = Number(limit?.concurrency);
+  if (rate > 0 && intervalMs > 0) pace.spacingMs = Math.max(100, Math.ceil(intervalMs / rate * 1.1));
+  if (concurrency > 0) pace.concurrency = Math.min(Math.floor(concurrency), 4);
+}
+async function lookupRow(row) {
+  for (let attempt = 0; ; attempt++) {
+    await nextSlot();
+    try { return await request('lookup', { doi: row.doi, bibliography: row.bibliography, title: row.title }); }
+    catch (error) {
+      if (error.status !== 429 || attempt >= MAX_LOOKUP_RETRIES || stop) throw error;
+      const waitMs = Math.min(Math.max(Number(error.retryAfterSeconds) || 2, 1), 60) * 1000 * (attempt + 1);
+      pace.concurrency = 1; pace.spacingMs = Math.min(pace.spacingMs * 2, 5000);
+      pace.nextAt = Math.max(pace.nextAt, Date.now() + waitMs);
+      message(`The lookup service is busy; retrying in ${Math.ceil(waitMs / 1000)} s…`);
+    }
+  }
+}
 async function runLookup(list, automatic = false) {
   if (busy) return;
   busy = true; stop = false; controls();
-  let completed = true;
+  const queue = [...list];
+  let failure = null, done = 0;
   message('Matching references…');
+  const step = async () => {
+    const row = queue.shift();
+    if (!row) return;
+    row.error = ''; row.selected = false; row.candidates = []; row.lookedUp = false;
+    try {
+      const { rateLimit, derivedDoi, ...data } = await lookupRow(row);
+      learnPace(rateLimit);
+      Object.assign(row, data, { choice: 0, lookedUp: true });
+      if (derivedDoi && !row.doi) row.doi = derivedDoi;
+      if (automatic) {
+        const choice = automaticMatch(row, row.candidates);
+        if (choice >= 0) Object.assign(row, { choice, selected: true });
+      }
+      if (!failure) message(`Matching references… ${++done} of ${list.length}`);
+    } catch (error) { row.error = error.message; failure ??= error; }
+    render();
+  };
+  const worker = async () => { while (queue.length && !stop && !failure) await step(); };
   try {
-    for (const row of list) {
-      if (stop) break;
-
-      row.error = ''; row.selected = false; row.candidates = []; row.lookedUp = false;
-      try {
-        const data = await request('lookup', { doi: row.doi, bibliography: row.bibliography, title: row.title });
-        Object.assign(row, data, { choice: 0, lookedUp: true });
-        if (automatic) {
-          const choice = automaticMatch(row, row.candidates);
-          if (choice >= 0) Object.assign(row, { choice, selected: true });
-        }
-      } catch (error) { row.error = error.message; completed = false; message(error.message, true); render(); break; }
-      render();
-    }
-    if (completed) message(stop ? 'Import paused. Completed results are retained.' : 'Matching complete. Uncertain references need review.');
-    return completed && !stop;
+    // The first response reports the provider's limits; later lookups run in parallel within them.
+    if (!stop) await step();
+    await Promise.all(Array.from({ length: pace.concurrency }, worker));
+    if (failure) { message(failure.message, true); return false; }
+    message(stop ? 'Import paused. Completed results are retained.' : 'Matching complete. Uncertain references need review.');
+    return !stop;
   } finally { busy = false; controls(); }
 }
 async function save() {

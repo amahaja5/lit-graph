@@ -63,3 +63,47 @@ test('signed-out users see Zotero sign-in without fetching protected import stat
     assert.equal(elements.has('import-token'),false);
   } finally { Object.assign(globalThis,originals); }
 });
+
+test('lookups run in parallel within reported Crossref limits and recover from a 429', async () => {
+  class Element {
+    constructor() { this.value='';this.files=[];this.checked=false;this.dataset={};this.children=[];this.listeners={};this.classList={toggle(){}}; }
+    addEventListener(name,fn){this.listeners[name]=fn;}
+    append(...nodes){this.children.push(...nodes);}
+    replaceChildren(...nodes){this.children=nodes;}
+    add(node){this.children.push(node);}
+  }
+  const elements=new Map();
+  const get=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
+  const originals={document:globalThis.document,window:globalThis.window,Option:globalThis.Option,fetch:globalThis.fetch};
+  globalThis.document={getElementById:get,createElement:()=>new Element(),createTextNode:text=>text,querySelectorAll:()=>[]};
+  globalThis.window={addEventListener(){}};
+  globalThis.Option=class{constructor(label,value){this.label=label;this.value=value;}};
+  const refs=Array.from({length:6},(_,i)=>({title:`Reference number ${i} about sampling`,bibliography:`Doe (2020). Reference number ${i} about sampling`,doi:''}));
+  let lookups=0,inFlight=0,maxInFlight=0,limited=false;
+  globalThis.fetch=async (url,options)=>{
+    const body=options.body?JSON.parse(options.body):null;
+    if(url==='/api/zotero/status')return Response.json({configured:true,connected:false});
+    if(url==='/api/import/status')return Response.json({grobidConfigured:false,modelConfigured:true});
+    if(url==='/api/import/warm')return Response.json({state:'unconfigured'});
+    if(url.endsWith('/extract'))return Response.json({filename:'paper.txt',references:refs});
+    if(url.endsWith('/lookup')){
+      lookups++;inFlight++;maxInFlight=Math.max(maxInFlight,inFlight);
+      await new Promise(r=>setTimeout(r,300));inFlight--;
+      if(lookups===4&&!limited){limited=true;return Response.json({error:{message:'The provider is busy. Wait before retrying.',retryAfterSeconds:1}},{status:429});}
+      const title=body.bibliography.replace(/^Doe \(2020\)\. /,'');
+      return Response.json({match:'candidate',rateLimit:{limit:10,intervalMs:1000,concurrency:3},candidates:[{title,doi:`10.1234/${lookups}`,authors:'Jane Doe',year:'2020',item:{creators:[{lastName:'Doe'}]}}]});
+    }
+    throw new Error('Unexpected route '+url);
+  };
+  try {
+    await import('../../frontend/src/citation-import/citationImport.js?parallel');
+    get('import-consent').checked=true; get('import-text').value='A public bibliography';
+    await get('import-refresh').listeners.click();
+    await get('import-extract').listeners.click();
+    assert.ok(maxInFlight>=2,`expected parallel lookups, saw ${maxInFlight}`);
+    assert.equal(lookups,7,'six references plus one retry after the 429');
+    assert.equal(elements.get('import-references').children.length,6);
+    assert.doesNotMatch(get('import-status').textContent,/busy|failed/i);
+    assert.match(get('import-status').textContent,/Connect Zotero to finish/);
+  } finally { Object.assign(globalThis,originals); }
+});
