@@ -92,56 +92,61 @@
         </section>
       </section>
 
-      <section id="citation-import" class="audit-workspace" aria-labelledby="import-title" hidden>
-        <div class="audit-intro">
-          <div><p class="audit-eyebrow">MANUSCRIPT → ZOTERO · TESTING PILOT</p><h2 id="import-title">Give your references a home.</h2>
-          <p>Connect Zotero and upload a public or test manuscript. Clear matches are saved automatically; uncertain references stay here for review.</p></div>
-          <span class="audit-badge">Public / test manuscripts only</span>
-        </div>
-        <div class="audit-columns">
-          <section class="audit-input panel-card" aria-labelledby="import-input-title">
-            <h3 id="import-input-title">1. Upload your manuscript</h3>
-            <label for="import-file">Upload PDF, Word, or text</label>
-            <input id="import-file" type="file" accept=".pdf,.docx,.txt,.md" />
-            <p class="muted">Up to 3 MB, 100,000 characters, and 80 references. Include the bibliography. Scanned PDFs need OCR first.</p>
-            <label for="import-text">Or paste a manuscript or bibliography</label>
-            <textarea id="import-text" rows="9" maxlength="100000" placeholder="Paste text including the references…"></textarea>
-            <label class="import-consent"><input id="import-consent" type="checkbox" /> This is a public/test manuscript that I can send to the configured extraction provider.</label>
-            <div class="audit-actions"><button id="import-extract" type="button" disabled>Import to Zotero</button><button id="import-example" type="button" class="secondary">Load sample bibliography</button></div>
-            <p class="muted audit-disclosure">Extraction sends your manuscript to this server. PDFs go to GROBID when configured; other inputs use Anthropic. Lookup sends reference strings or DOIs to Crossref. Clear bibliographic matches are saved automatically to a new Zotero collection. This app does not persist your manuscript; unfinished work is lost on refresh.</p>
-          </section>
-          <section class="audit-input panel-card" aria-labelledby="import-connection-title">
-            <h3 id="import-connection-title">Connect Zotero</h3>
-            <button id="import-refresh" type="button" class="secondary">Check connection</button>
+      <section id="citation-import" class="audit-workspace import-workspace" aria-labelledby="import-title" hidden>
+        <div class="import-head">
+          <div><p class="audit-eyebrow">MANUSCRIPT → ZOTERO · TESTING PILOT</p><h2 id="import-title">Give your references a home.</h2></div>
+          <div class="import-account" aria-label="Zotero account">
+            <p id="import-zotero-status">Sign in with an allowed Zotero account to use the app.</p>
             <p id="import-connection-status" class="muted" role="status">Checking server setup…</p>
-            <div class="audit-zotero-connection">
-              <p id="import-zotero-status">Sign in with an allowed Zotero account to use the app.</p>
-              <div class="audit-actions"><button id="import-zotero-connect" type="button" class="secondary" disabled>Sign in with Zotero</button><button id="import-zotero-disconnect" type="button" class="secondary" hidden>Sign out</button></div>
-              <p class="muted">Authorize read and write access to your personal library. No manuscript or PDF attachment is uploaded to Zotero.</p>
-            </div>
-            <p class="muted">This pilot looks up works indexed by Crossref. Some books, preprints, and archival sources may remain unresolved. You can download the full inventory for follow-up.</p>
-          </section>
-        </div>
-        <p id="import-status" class="audit-status" role="status" aria-live="polite">Add a public/test manuscript to begin.</p>
-        <section id="import-review" hidden aria-labelledby="import-review-title">
-          <div class="audit-section-heading"><div><h3 id="import-review-title">2. Import results</h3><p id="import-summary" class="muted"></p></div>
-            <div class="audit-actions"><button id="import-lookup-all" type="button">Look up references</button><button id="import-stop" type="button" class="secondary" hidden>Stop after current reference</button><button id="import-ris" type="button" class="secondary">Download extracted RIS</button><button id="import-download" type="button" class="secondary">Download inventory</button></div>
+            <div class="import-account-actions"><button id="import-zotero-connect" type="button" class="secondary" disabled>Sign in with Zotero</button><button id="import-zotero-disconnect" type="button" class="secondary" hidden>Sign out</button><button id="import-refresh" type="button" class="secondary">Refresh</button></div>
           </div>
-          <p id="import-warnings" class="muted"></p>
-          <div id="import-references" class="audit-results"></div>
-          <div class="audit-actions import-add"><button id="import-add" type="button" class="secondary">Add missing reference</button></div>
-          <section class="audit-input panel-card import-save" aria-labelledby="import-save-title">
-            <h3 id="import-save-title">Finish unresolved references</h3>
-            <label for="import-name">New Zotero collection name</label><input id="import-name" type="text" maxlength="200" placeholder="Manuscript references" />
-            <p id="import-save-summary" class="muted">Choose matches above to save.</p>
-            <button id="import-save" type="button" disabled>Create collection and save selected</button>
-            <a id="import-open-collection" target="_blank" rel="noopener noreferrer" hidden>Open collection in Zotero</a>
-            <div id="import-next" hidden>
-              <p class="muted">Next, add PDFs in Zotero: select the collection's items, right-click, and choose <strong>Find Full Text</strong>. Attach any paywalled PDFs yourself, and let Zotero sync the files.</p>
-              <button id="import-check" type="button">Check citations against these sources</button>
-            </div>
-            <p class="muted">Exact DOI matches already in your library are reused. Your other collections and existing item metadata are preserved.</p>
-          </section>
+        </div>
+
+        <section id="import-setup" class="panel-card import-setup" aria-label="Upload your manuscript">
+          <label id="import-drop" class="import-drop" for="import-file">
+            <strong>Drop your manuscript here</strong> <span>or <span class="import-link">choose a file</span></span>
+            <span id="import-file-name" class="muted">PDF, Word or text · up to 3 MB · include the bibliography</span>
+            <input id="import-file" type="file" accept=".pdf,.docx,.txt,.md" />
+          </label>
+          <details id="import-paste" class="import-paste"><summary>Paste text instead</summary>
+            <label for="import-text" class="sr-only">Manuscript or bibliography text</label>
+            <textarea id="import-text" rows="7" maxlength="100000" placeholder="Paste text including the references…"></textarea>
+          </details>
+          <div class="import-go">
+            <label class="import-consent"><input id="import-consent" type="checkbox" /> This is a public/test manuscript that I can send to the extraction service.</label>
+            <div class="audit-actions"><button id="import-extract" type="button" disabled>Import to Zotero</button><button id="import-example" type="button" class="secondary">Try a sample</button></div>
+          </div>
+          <details class="import-disclosure"><summary>What gets sent where?</summary>
+            <p class="muted">PDFs go to GROBID; other inputs go to Anthropic for extraction. Reference strings or DOIs are looked up on Crossref, and arXiv references on DataCite. Clear matches are saved to a new collection in your personal Zotero library; your manuscript is not uploaded to Zotero. Up to 80 references; scanned PDFs need OCR first. Nothing is stored by this app, and unfinished work is lost on refresh.</p>
+          </details>
+        </section>
+        <div id="import-loaded" class="import-loaded" hidden><span id="import-loaded-name"></span><button id="import-change" type="button" class="secondary">Change manuscript</button></div>
+
+        <div id="import-bar" class="import-bar">
+          <div class="import-bar-status">
+            <p id="import-status" class="import-status" role="status" aria-live="polite">Add a public/test manuscript to begin.</p>
+            <progress id="import-progress" hidden></progress>
+            <p id="import-summary" class="muted"></p>
+          </div>
+          <div class="import-bar-actions">
+            <label id="import-name-field" class="import-name-field" hidden>Collection <input id="import-name" type="text" maxlength="200" placeholder="Manuscript references" /></label>
+            <button id="import-save" type="button" hidden disabled>Save to Zotero</button>
+            <button id="import-stop" type="button" class="secondary" hidden>Stop</button>
+            <a id="import-open-collection" class="import-button-link" target="_blank" rel="noopener noreferrer" hidden>Open in Zotero</a>
+            <details id="import-more" class="import-more" hidden><summary>More</summary>
+              <div class="import-more-menu"><button id="import-lookup-all" type="button" class="secondary">Look up remaining</button><button id="import-add" type="button" class="secondary">Add missing reference</button><button id="import-ris" type="button" class="secondary">Download RIS</button><button id="import-download" type="button" class="secondary">Download inventory</button></div>
+            </details>
+          </div>
+          <div id="import-next" class="import-next" hidden>
+            <p class="muted">Next, add PDFs in Zotero: select the collection's items, right-click, and choose <strong>Find Full Text</strong>. Attach paywalled PDFs yourself and let Zotero sync.</p>
+            <button id="import-check" type="button">Check citations against these sources</button>
+          </div>
+        </div>
+
+        <section id="import-review" hidden aria-label="Import results">
+          <p id="import-warnings" class="muted import-warnings"></p>
+          <div id="import-filters" class="import-filters" role="group" aria-label="Show references"></div>
+          <div id="import-references" class="import-list"></div>
         </section>
       </section>
 
