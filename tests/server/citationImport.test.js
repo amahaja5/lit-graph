@@ -112,12 +112,14 @@ test('shared and Vercel handlers reject wrong methods, remote access, malformed 
 });
 test('Express routes carry upload consent, lookup and save responses through the same service', async t => {
   const seen = [];
-  const service = { status: () => ({ modelConfigured: true }), extract: body => { seen.push(body); return { references: [{ bibliography: reference }] }; }, lookup: () => ({ candidates: [crossrefRecord(work)] }) };
+  const service = { status: () => ({ modelConfigured: true }), warm: () => ({ state: 'ready' }), extract: body => { seen.push(body); return { references: [{ bibliography: reference }] }; }, lookup: () => ({ candidates: [crossrefRecord(work)] }) };
   const server = createApp({ citationImport: service, serveFrontend: false }).listen(0, '127.0.0.1');
   await once(server, 'listening'); t.after(() => server.close());
   const base = `http://127.0.0.1:${server.address().port}/api/import/`;
   const res = await fetch(base + 'extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: reference, consent: true }) });
   assert.equal(res.status, 200); assert.equal((await res.json()).references.length, 1); assert.equal(seen[0].consent, true);
+  const warm = await fetch(base + 'warm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  assert.deepEqual(await warm.json(), { state: 'ready' });
   const lookup = await fetch(base + 'lookup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doi }) });
   assert.equal((await lookup.json()).candidates[0].doi, doi);
 });

@@ -21,6 +21,7 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
   globalThis.fetch=async (url,options)=>{
     const body=options.body ? JSON.parse(options.body):null;calls.push({url,body});
     if(url==='/api/import/status')return Response.json({grobidConfigured:true});
+    if(url==='/api/import/warm')return Response.json({state:'starting'});
     if(url==='/api/zotero/status')return Response.json({configured:true,connected:true,writeRequested:true,userId:'123'});
     if(url.endsWith('/extract'))return Response.json({filename:'paper.pdf',references:[{title,bibliography:`Doe (2020). ${title}`,doi:'10.1234/one'},{title:'Unrelated reference',bibliography:'Unrelated reference',doi:''}]});
     if(url.endsWith('/lookup'))return Response.json({match:'doi',candidates:[{title,doi:'10.1234/one',authors:'Jane Doe',year:'2020',item:{creators:[{lastName:'Doe'}]}}]});
@@ -34,7 +35,8 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
     get('import-text').value='A public bibliography';
     await get('import-refresh').listeners.click();
     await get('import-extract').listeners.click();
-    assert.deepEqual(calls.filter(c=>!c.url.endsWith('/status')).map(c=>c.url),['/api/import/extract','/api/import/lookup','/api/import/lookup','/api/import/collection','/api/import/save']);
+    assert.equal(calls.filter(c=>c.url==='/api/import/warm').length,1,'signed-in load and panel refresh warm GROBID once');
+    assert.deepEqual(calls.filter(c=>!c.url.endsWith('/status')&&!c.url.endsWith('/warm')).map(c=>c.url),['/api/import/extract','/api/import/lookup','/api/import/lookup','/api/import/collection','/api/import/save']);
     assert.equal(calls.find(c=>c.url.endsWith('/save')).body.doi,'10.1234/one');
     assert.match(get('import-status').textContent,/Saved 1 references.*1 need review/);
   } finally { Object.assign(globalThis,originals); }
@@ -56,7 +58,7 @@ test('signed-out users see Zotero sign-in without fetching protected import stat
     await get('import-refresh').listeners.click();
     assert.equal(get('import-zotero-connect').disabled,false);
     assert.equal(get('import-extract').disabled,true);
-    assert.deepEqual(calls,['/api/zotero/status']);
+    assert.ok(calls.length&&calls.every(url=>url==='/api/zotero/status'),'signed-out users never warm GROBID');
     assert.match(get('import-connection-status').textContent,/Sign in/);
     assert.equal(elements.has('import-token'),false);
   } finally { Object.assign(globalThis,originals); }

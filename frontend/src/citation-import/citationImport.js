@@ -1,5 +1,6 @@
 import { automaticMatch } from './importMatching.js';
 import { referencesToRis } from './ris.js';
+import { installGrobidWarmup, warmGrobid } from './grobidWarmup.js';
 const $ = id => document.getElementById(`import-${id}`);
 const element = (tag, value, className = '') => { const el = document.createElement(tag); el.textContent = value; el.className = className; return el; };
 let rows = [], busy = false, stop = false, ready = false, connection = null, loaded = false;
@@ -50,6 +51,7 @@ async function refresh() {
     }
     const status = await request('status');
     ready = status.modelConfigured || status.grobidConfigured;
+    if (status.grobidConfigured) warmGrobid();
     $('connection-status').textContent = ready ? 'Ready to import.' : 'Lookup is ready. Configure GROBID for PDFs or Anthropic for text extraction on the server.';
     if (owner && connection.userId && owner !== connection.userId) {
       collection = null; importId = crypto.randomUUID(); rows.forEach(r => { r.saved = false; });
@@ -115,7 +117,8 @@ async function upload() {
 }
 async function extract() {
   let extracted = false;
-  busy = true; stop = false; controls(); message('Importing references…');
+  busy = true; stop = false; controls();
+  message(/\.pdf$/i.test($('file').files[0]?.name || '') ? 'Importing references… The PDF extraction service can take up to a minute to start.' : 'Importing references…');
   try {
     const data = await request('extract', await upload());
     reset();
@@ -221,6 +224,7 @@ $('download').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ schemaVersion: 1, references: rows, collection }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = 'citation-import.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
+installGrobidWarmup();
 window.addEventListener('litgraph-workspace', event => {
   if (event.detail === 'import' && !loaded) { loaded = true; refresh(); }
 });
