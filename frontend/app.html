@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Groundwork</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href="https://groundwork.avijmahajan.com/app" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#cc2936" />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1><a href="/" class="home-link">Groundwork</a></h1>
+          <p class="tagline">Find the papers. Keep the references. Check the claims.</p>
+        </div>
+        <nav class="workspace-nav" aria-label="Workspace">
+          <button type="button" data-workspace="explore" aria-pressed="true">Explore papers</button>
+          <button type="button" data-workspace="import" aria-pressed="false">Import references</button>
+          <button type="button" data-workspace="audit" aria-pressed="false">Check citations</button>
+        </nav>
+        <div id="account" class="account" aria-label="Zotero account">
+          <span id="account-name" class="account-name" hidden></span>
+          <button id="account-signin" type="button" class="secondary" disabled>Sign in with Zotero</button>
+          <button id="account-signout" type="button" class="secondary" hidden>Sign out</button>
+          <span id="account-error" class="account-error" role="status" hidden></span>
+        </div>
+      </header>
+
+      <form id="search-form" class="search-form" novalidate>
+          <label for="paper-id-input" class="sr-only">Semantic Scholar ID / DOI / arXiv ID / PubMed ID / NBER ID</label>
+          <input
+            id="paper-id-input"
+            name="paperId"
+            type="text"
+            placeholder="DOI:..., ARXIV:..., PMID:..., NBER:w12345"
+            autocomplete="off"
+          />
+          <button id="search-submit" type="submit">Load Seed</button>
+      </form>
+
+      <div id="global-status" class="global-status sr-only live-region" aria-live="polite"></div>
+      <div id="global-error" class="global-error sr-only live-region" aria-live="assertive"></div>
+      <div id="global-notices" class="global-notices sr-only live-region" aria-live="polite"></div>
+      <div id="hover-tip" class="hover-tip" hidden></div>
+
+      <section id="manuscript-audit" class="audit-workspace" aria-labelledby="audit-title" hidden>
+        <div class="audit-intro">
+          <div><p class="audit-eyebrow">CITATION AUDIT</p><h2 id="audit-title">Do the sources support the claim?</h2>
+          <p>Expand a manuscript’s citations, read the source evidence, and find claims that need a closer look.</p></div>
+          <span id="audit-connection" class="audit-badge">Checking connection</span>
+        </div>
+        <div id="audit-setup" class="audit-setup" hidden></div>
+        <div class="audit-columns">
+          <section class="audit-input panel-card" aria-labelledby="audit-input-title">
+            <h3 id="audit-input-title">1. Add your manuscript</h3>
+            <p class="muted">Include the bibliography. Up to 100,000 characters or a 3 MB file.</p>
+            <label for="audit-arxiv">Load an arXiv paper</label>
+            <input id="audit-arxiv" type="text" placeholder="https://arxiv.org/abs/2605.06322v2" autocomplete="off" />
+            <label for="audit-file">Or upload PDF, Word, or text</label>
+            <input id="audit-file" type="file" accept=".pdf,.docx,.txt,.md" />
+            <label for="audit-text">Or paste manuscript text</label>
+            <textarea id="audit-text" rows="12" maxlength="100000" placeholder="Paste the manuscript, including in-text citations and references…"></textarea>
+            <p id="audit-handoff" class="muted" hidden></p>
+            <label for="audit-collection">Find cited sources in Zotero</label>
+            <div class="audit-zotero-connection">
+              <p id="zotero-connection-status" role="status">Checking Zotero connection…</p>
+              <a id="zotero-manage" href="https://www.zotero.org/settings/keys" target="_blank" rel="noopener noreferrer" hidden>Manage access on Zotero</a>
+            </div>
+            <select id="audit-collection"><option value="">Search the whole library</option></select>
+            <p class="muted">Sources can be outside the manuscript’s own collection. Public arXiv PDFs are a fallback.</p>
+            <div class="audit-actions"><button id="audit-extract" type="button">Extract citations</button><button id="audit-example" class="secondary" type="button">Load example</button></div>
+            <details class="audit-settings"><summary>Connection settings</summary>
+              <button id="audit-connect" type="button" class="secondary">Refresh connection</button>
+            </details>
+            <p class="muted audit-disclosure">Manuscript text and source excerpts are sent to Anthropic when you run these steps. When semantic evidence ranking is configured (including shadow evaluation), claims and candidate source excerpts are also sent to TypeSafe. Results stay in this browser session unless downloaded.</p>
+          </section>
+          <section class="audit-guide panel-card">
+            <h3>Evidence you can inspect</h3>
+            <ol><li><strong>Review the citation inventory.</strong> Check that passages resolve to the right bibliography entries and versions.</li>
+            <li><strong>Check the cited claims.</strong> See each source’s support and the combined assessment for citations grouped together.</li>
+            <li><strong>Follow the evidence.</strong> Open quoted passages, inspect PDF pages, and export the findings.</li></ol>
+            <p class="audit-scope">Missing full text stays unverified. This checks support in retrieved passages; it does not independently validate experiments or certify printed page numbers.</p>
+          </section>
+        </div>
+        <p id="audit-status" class="audit-status" role="status" aria-live="polite">Add a manuscript to begin.</p>
+        <section id="audit-review" hidden>
+          <div class="audit-section-heading"><div><h3>2. Review and check</h3><p id="audit-inventory-note" class="muted"></p></div>
+            <div class="audit-actions"><button id="audit-run" type="button">Check cited claims</button><button id="audit-stop" type="button" class="secondary" hidden>Stop</button></div></div>
+          <details class="audit-inventory-wrap"><summary>Bibliography and source matching</summary><div id="audit-inventory"></div><button id="audit-add-reference" class="secondary" type="button">Add missing reference</button></details>
+          <div class="audit-section-heading"><p id="audit-summary" class="muted"></p><div class="audit-actions"><button id="audit-add-passage" type="button" class="secondary">Add missing passage</button>
+            <button id="audit-download" type="button" class="secondary">Download report</button><button id="audit-download-json" type="button" class="secondary">Download evidence JSON</button></div></div>
+          <div id="audit-results" class="audit-results"></div>
+        </section>
+      </section>
+
+      <section id="citation-import" class="audit-workspace import-workspace" aria-labelledby="import-title" hidden>
+        <div class="import-head">
+          <div><p class="audit-eyebrow">MANUSCRIPT → ZOTERO</p><h2 id="import-title">Give your references a home.</h2></div>
+          <div class="import-account" aria-label="Zotero account">
+            <p id="import-zotero-status">Sign in with an allowed Zotero account to use the app.</p>
+            <p id="import-connection-status" class="muted" role="status">Checking server setup…</p>
+            <div class="import-account-actions"><button id="import-refresh" type="button" class="secondary">Refresh</button></div>
+          </div>
+        </div>
+
+        <section id="import-setup" class="panel-card import-setup" aria-label="Upload your manuscript">
+          <label id="import-drop" class="import-drop" for="import-file">
+            <strong>Drop your manuscript here</strong> <span>or <span class="import-link">choose a file</span></span>
+            <span id="import-file-name" class="muted">PDF, Word or text · up to 3 MB · include the bibliography</span>
+            <input id="import-file" type="file" accept=".pdf,.docx,.txt,.md" />
+          </label>
+          <details id="import-paste" class="import-paste"><summary>Paste text instead</summary>
+            <label for="import-text" class="sr-only">Manuscript or bibliography text</label>
+            <textarea id="import-text" rows="7" maxlength="100000" placeholder="Paste text including the references…"></textarea>
+          </details>
+          <div class="import-go">
+            <label class="import-consent"><input id="import-consent" type="checkbox" /> This is a public/test manuscript that I can send to the extraction service.</label>
+            <div class="audit-actions"><button id="import-extract" type="button" disabled>Import to Zotero</button><button id="import-example" type="button" class="secondary">Try a sample</button></div>
+          </div>
+          <details class="import-disclosure"><summary>What gets sent where?</summary>
+            <p class="muted">PDFs go to GROBID; other inputs go to Anthropic for extraction. Reference strings or DOIs are looked up on Crossref, and arXiv references on DataCite. Clear matches are saved to a new collection in your personal Zotero library; your manuscript is not uploaded to Zotero. Up to 80 references; scanned PDFs need OCR first. Nothing is stored by this app, and unfinished work is lost on refresh.</p>
+          </details>
+        </section>
+        <div id="import-loaded" class="import-loaded" hidden><span id="import-loaded-name"></span><button id="import-change" type="button" class="secondary">Change manuscript</button></div>
+
+        <div id="import-bar" class="import-bar">
+          <div class="import-bar-status">
+            <p id="import-status" class="import-status" role="status" aria-live="polite">Add a public/test manuscript to begin.</p>
+            <progress id="import-progress" hidden></progress>
+            <p id="import-summary" class="muted"></p>
+          </div>
+          <div class="import-bar-actions">
+            <label id="import-name-field" class="import-name-field" hidden>Collection <input id="import-name" type="text" maxlength="200" placeholder="Manuscript references" /></label>
+            <button id="import-save" type="button" hidden disabled>Save to Zotero</button>
+            <button id="import-stop" type="button" class="secondary" hidden>Stop</button>
+            <a id="import-open-collection" class="import-button-link" target="_blank" rel="noopener noreferrer" hidden>Open in Zotero</a>
+            <details id="import-more" class="import-more" hidden><summary>More</summary>
+              <div class="import-more-menu"><button id="import-lookup-all" type="button" class="secondary">Look up remaining</button><button id="import-add" type="button" class="secondary">Add missing reference</button><button id="import-ris" type="button" class="secondary">Download RIS</button><button id="import-download" type="button" class="secondary">Download inventory</button></div>
+            </details>
+          </div>
+          <div id="import-next" class="import-next" hidden>
+            <p class="muted">Next, add PDFs in Zotero: select the collection's items, right-click, and choose <strong>Find Full Text</strong>. Attach paywalled PDFs yourself and let Zotero sync.</p>
+            <button id="import-check" type="button">Check citations against these sources</button>
+          </div>
+        </div>
+
+        <section id="import-review" hidden aria-label="Import results">
+          <p id="import-warnings" class="muted import-warnings"></p>
+          <div id="import-filters" class="import-filters" role="group" aria-label="Show references"></div>
+          <div id="import-references" class="import-list"></div>
+        </section>
+      </section>
+
+      <main class="layout">
+        <section class="graph-panel" aria-label="Graph canvas">
+          <div class="graph-toolbar">
+            <div class="graph-toolbar-actions">
+              <button id="reset-view-btn" type="button">Reset View</button>
+              <button id="layout-mode-btn" type="button" class="secondary" aria-pressed="true">Year Layout: On</button>
+              <button id="year-bars-btn" type="button" class="secondary" aria-pressed="true">Year Bars: On</button>
+              <label class="toolbar-control" for="expansion-mode-select">
+                Expansion
+                <select id="expansion-mode-select" class="toolbar-select">
+                  <option value="relevance">Top relevance</option>
+                  <option value="lesser_known_sample">Lesser-known sample</option>
+                </select>
+              </label>
+              <label class="toolbar-control" for="expansion-count-input">
+                Per Side
+                <input
+                  id="expansion-count-input"
+                  class="toolbar-number-input"
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value="15"
+                  inputmode="numeric"
+                />
+              </label>
+            </div>
+            <div class="graph-toolbar-meta">
+              <span id="layout-hint" class="toolbar-hint">Older ← Year → Newer</span>
+              <span id="graph-summary">No graph loaded</span>
+            </div>
+          </div>
+          <svg id="graph-svg" class="graph-svg" role="img" aria-label="Literature graph visualization"></svg>
+          <div id="graph-empty" class="graph-empty">
+            Enter a Semantic Scholar paper identifier to begin exploring.
+          </div>
+        </section>
+
+        <aside class="side-panel" aria-label="Paper details">
+          <section class="panel-card">
+            <h2>Paper Details</h2>
+            <div id="sidecar-empty" class="muted">Select a node to view metadata.</div>
+            <div id="sidecar-content" class="sidecar-content" hidden>
+              <h3 id="sidecar-title">Untitled</h3>
+              <div id="sidecar-meta" class="meta-grid"></div>
+              <p id="sidecar-authors" class="authors"></p>
+              <p id="sidecar-abstract" class="abstract"></p>
+              <div class="sidecar-actions">
+                <button id="sidecar-expand-btn" type="button">Expand Node</button>
+                <button id="sidecar-review-btn" type="button">Add to Review</button>
+                <a id="sidecar-source-link" href="#" target="_blank" rel="noopener noreferrer">Open Source</a>
+              </div>
+              <div id="sidecar-state" class="muted"></div>
+            </div>
+          </section>
+
+        </aside>
+      </main>
+
+      <section id="review-section" class="review-section panel-card" aria-label="Review workspace" data-review-mode="cart">
+        <div class="panel-header-row review-section-header">
+          <div class="review-section-heading">
+            <h2>Review Workspace</h2>
+            <p class="muted">Collect papers, export the cart, and generate a structured literature synthesis grounded only in the selected set.</p>
+          </div>
+          <div class="review-section-badges">
+            <span id="review-count" class="badge">0</span>
+            <span id="review-draft-badge" class="badge" hidden>Stale</span>
+          </div>
+        </div>
+
+        <div class="review-workspace-controls">
+          <div class="review-cart-block">
+            <div class="panel-header-row review-subsection-header">
+              <h3>Review Cart</h3>
+            </div>
+            <p class="muted">Export selected papers as BibTeX or identifier text.</p>
+            <ul id="review-list" class="review-list"></ul>
+          </div>
+
+          <div class="review-control-block">
+            <div class="review-actions review-export-actions">
+              <label class="review-sort-control" for="export-bibtex-sort">
+                Sort
+                <select id="export-bibtex-sort" class="toolbar-select" disabled>
+                  <option value="author">Author</option>
+                  <option value="year">Year</option>
+                </select>
+              </label>
+              <button id="export-bibtex-btn" type="button" disabled>Export BibTeX</button>
+              <button id="export-identifiers-btn" type="button" disabled>Export IDs (.txt)</button>
+            </div>
+            <div class="review-zotero" aria-label="Save the cart to Zotero">
+              <label for="cart-zotero-name">Zotero collection</label>
+              <div class="review-zotero-row">
+                <input id="cart-zotero-name" type="text" maxlength="200" placeholder="Reading list name" disabled />
+                <button id="cart-zotero-save" type="button" disabled>Save to Zotero</button>
+              </div>
+              <p id="cart-zotero-status" class="muted" role="status"></p>
+              <a id="cart-zotero-open" target="_blank" rel="noopener noreferrer" hidden>Open in Zotero</a>
+            </div>
+            <div class="review-actions review-generate-actions">
+              <button id="generate-review-btn" type="button" disabled>Generate Review</button>
+            </div>
+            <div id="review-draft-status" class="muted review-draft-status" hidden></div>
+            <div id="review-draft-warnings" class="review-warnings"></div>
+            <p class="muted">Review evidence is sent to Anthropic. When HTML quality checks are configured, candidate HTML text is also sent to TypeSafe, including during shadow evaluation.</p>
+          </div>
+        </div>
+
+        <div id="review-draft-empty" class="review-empty">Add 2-10 papers to the review cart to generate a review.</div>
+        <div id="review-draft-content" class="review-draft" hidden></div>
+      </section>
+
+      <footer class="app-footer">
+        <small id="copyright-text">Copyright 2026 Avi Mahajan</small>
+      </footer>
+    </div>
+
+    <!-- Workspaces load before main.js: its graph imports D3 from a CDN, and module scripts run in order. -->
+    <script type="module" src="/src/audit/manuscriptAudit.js"></script>
+    <script type="module" src="/src/citation-import/citationImport.js"></script>
+    <script type="module" src="/src/workspaces.js"></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

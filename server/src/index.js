@@ -77,8 +77,9 @@ export function createApp({
   if (serveFrontend) {
     app.use(express.static(frontendDir));
 
-    app.get("*", (_req, res) => {
-      res.sendFile(path.join(frontendDir, "index.html"));
+    // "/" is the landing page (index.html via static); the app lives at /app.
+    app.get(["/app", "/app/"], (_req, res) => {
+      res.sendFile(path.join(frontendDir, "app.html"));
     });
   }
 
