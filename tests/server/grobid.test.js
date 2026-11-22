@@ -41,14 +41,19 @@ test('errors do not leak upstream bodies or keys', async () => {
   const client=createGrobid({env,fetchImpl:async()=>new Response('secret upstream text',{status:401})});
   await assert.rejects(client.extract(file), error=> /rejected/.test(error.message) && !/secret upstream/.test(error.message));
 });
-test('PDF extraction requires consent and never falls back to Anthropic on failure', async () => {
+test('PDF extraction requires consent and reports GROBID failures without another extractor', async () => {
   let called=0;
-  const service=createCitationImport({model:{configured:false},grobid:{configured:true,extract:async()=>{called++;throw new Error('GROBID unavailable');}}});
+  const service=createCitationImport({grobid:{configured:true,extract:async()=>{called++;throw new Error('GROBID unavailable');}}});
   await assert.rejects(service.extract({file}),/Confirm/); assert.equal(called,0);
   await assert.rejects(service.extract({file,consent:true}),/GROBID unavailable/);assert.equal(called,1);
   assert.equal(service.status().grobidConfigured,true);
 });
-
+test('full-text extraction asks the wrapper for sentence-segmented TEI', async () => {
+  let requested;
+  const client=createGrobid({env,warmState:createWarmState(),fetchImpl:async url=>{requested=url;return new Response('<TEI/>');}});
+  assert.equal(await client.fulltext(file),'<TEI/>');
+  assert.equal(requested,'https://extract.example/extract?mode=fulltext&segment_sentences=true');
+});
 test('warm pings the configured health path with the key, then skips repeat pings while ready', async () => {
   const calls = []; let t = 1000;
   const client = createGrobid({ env: { ...env, GROBID_WARM_PATH: '/api/isalive' }, warmState: createWarmState(), now: () => t, fetchImpl: async (url, options) => {

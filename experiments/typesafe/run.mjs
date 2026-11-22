@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { selectPassages } from "../../lib/audit/passages.js";
-import { extractReadableTextFromHtml } from '../../lib/review/reviewEvidence.js';
+import { extractReadableTextFromHtml } from './htmlBaseline.mjs';
 import { retrieval, html, relations } from './fixtures.mjs';
 
 const out = new URL('./results/', import.meta.url);

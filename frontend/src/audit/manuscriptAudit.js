@@ -49,7 +49,6 @@ function updateControls() {
       ? "Resume / retry audit"
       : "Check cited claims";
   $("audit-stop").hidden = !busy;
-  $("audit-example").disabled = locked;
   $("audit-connect").disabled = locked;
   $("audit-add-reference").disabled =
     locked || !inventory || inventory.references.length >= 80;
@@ -120,7 +119,7 @@ async function connect() {
     $("audit-setup").hidden = modelReady;
     $("audit-setup").textContent = modelReady
       ? ""
-      : "To run audits, set ANTHROPIC_API_KEY and ANTHROPIC_MODEL in the server environment and restart the app.";
+      : `To check citations, set ${[!status.extractionConfigured && "GROBID_API_URL and EXTRACTION_API_KEY", !status.checkerConfigured && "TYPESAFE_API_KEY"].filter(Boolean).join(" and ") || "the GROBID and TypeSafe settings"} in the server environment and restart the app.`;
     const select = $("audit-collection");
     const old = select.value;
     select.replaceChildren(new Option("Search the whole library", ""));
@@ -163,12 +162,14 @@ function renderZoteroConnection() {
 async function uploadPayload() {
   const file = $("audit-file").files[0];
   if (!file && handoff?.manuscript?.file) return { file: handoff.manuscript.file };
-  if (!file)
-    return $("audit-arxiv").value.trim()
-      ? { arxiv: $("audit-arxiv").value.trim() }
-      : { text: $("audit-text").value };
+  if (!file) {
+    if ($("audit-arxiv").value.trim()) return { arxiv: $("audit-arxiv").value.trim() };
+    throw new Error("Choose the manuscript PDF or enter an arXiv link.");
+  }
+  if (!/\.pdf$/i.test(file.name) && file.type !== "application/pdf")
+    throw new Error("Choose the manuscript as a PDF.");
   if (file.size > 3 * 1024 * 1024)
-    throw new Error("Choose a file no larger than 3 MB.");
+    throw new Error("Choose a PDF no larger than 3 MB.");
   const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(",")[1]);
@@ -182,7 +183,7 @@ async function extract() {
   busy = true;
   controller = new AbortController();
   updateControls();
-  message("Reading the manuscript and resolving its citation markers…");
+  message("Extracting citations and the bibliography with GROBID…");
   try {
     const data = await request("extract", await uploadPayload());
     inventory = data;
@@ -499,31 +500,14 @@ $("audit-arxiv").addEventListener("input", () => {
   $("audit-file").value = "";
   invalidateInventory();
 });
-$("audit-text").addEventListener("input", () => {
-  clearHandoff();
-  $("audit-arxiv").value = "";
-  if ($("audit-file").files.length) $("audit-file").value = "";
-  invalidateInventory();
-});
 $("audit-file").addEventListener("change", () => {
   clearHandoff();
   $("audit-arxiv").value = "";
   invalidateInventory();
   if ($("audit-file").files.length)
-    message("The selected file will be used instead of pasted text.");
+    message("PDF selected. Extract citations to begin.");
 });
 $("audit-collection").addEventListener("change", invalidateResults);
-$("audit-example").addEventListener("click", () => {
-  clearHandoff();
-  $("audit-arxiv").value = "";
-  $("audit-file").value = "";
-  $("audit-text").value =
-    "Example manuscript for testing\n\nA weight-shared transformer with 53K parameters achieved 95.3% SMILES validity (Jindal and Ju, 2026).\n\nThe same 53K model achieved 99.9% SMILES validity (Jindal and Ju, 2026).\n\nReferences\nJindal, Akhil, and Harang Ju. 2026. SMolLM: Small Language Models Learn Small Molecular Grammar. arXiv:2605.06322v2.";
-  invalidateInventory();
-  message(
-    "Example loaded: one reported result and one deliberately altered number.",
-  );
-});
 // Arriving from an import: same manuscript, its new collection, and the saved Zotero items.
 async function acceptHandoff() {
   const next = takeAuditHandoff();
@@ -531,7 +515,6 @@ async function acceptHandoff() {
   $("audit-connection").dataset.loaded = 'true';
   $("audit-arxiv").value = "";
   $("audit-file").value = "";
-  $("audit-text").value = next.manuscript?.text || "";
   invalidateInventory();
   handoff = next;
   $("audit-handoff").textContent = `Using the manuscript you just imported${next.manuscript?.file ? ` (${next.manuscript.file.name})` : ""}, with ${next.references.length} linked Zotero items from "${next.collection.name}".`;

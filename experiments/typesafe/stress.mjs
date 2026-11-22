@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { extractReadableTextFromHtml } from '../../lib/review/reviewEvidence.js';
+import { extractReadableTextFromHtml } from './htmlBaseline.mjs';
 
 // Additional synthetic cases fixed before their first API run; original rubric frozen.
 const fixtures = [

@@ -88,9 +88,9 @@ async function refresh() {
       return;
     }
     const status = await request('status');
-    ready = status.modelConfigured || status.grobidConfigured;
+    ready = Boolean(status.grobidConfigured);
     if (status.grobidConfigured) warmGrobid();
-    $('connection-status').textContent = ready ? 'Ready to import.' : 'Lookup is ready. Configure GROBID for PDFs or Anthropic for text extraction on the server.';
+    $('connection-status').textContent = ready ? 'Ready to import.' : 'Reference extraction needs GROBID. Set GROBID_API_URL and EXTRACTION_API_KEY on the server.';
     if (owner && connection.userId && owner !== connection.userId) {
       collection = null; importId = crypto.randomUUID(); rows.forEach(r => { r.saved = false; });
       $('open-collection').hidden = true; render();
@@ -189,27 +189,32 @@ function render() {
   if (!shown) root.append(element('p', filter === 'attention' ? 'Nothing needs your attention.' : 'No references in this view.', 'muted import-empty'));
   controls();
 }
+// Base64 in chunks: one String.fromCharCode call per 32 KB keeps large PDFs within argument limits.
+function toBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
 async function upload() {
   const file = $('file').files[0];
-  if (!file) return { text: $('text').value, consent: $('consent').checked };
-  if (file.size > 3 * 1024 * 1024) throw new Error('Choose a file no larger than 3 MB.');
-  const base64 = await new Promise((resolve, reject) => {
-    const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1]); reader.onerror = () => reject(new Error('Could not read this file.')); reader.readAsDataURL(file);
-  });
-  return { file: { name: file.name, base64 }, consent: $('consent').checked };
+  if (!file) throw new Error('Choose the manuscript PDF first.');
+  if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') throw new Error('Choose the manuscript as a PDF.');
+  if (file.size > 3 * 1024 * 1024) throw new Error('Choose a PDF no larger than 3 MB.');
+  return { file: { name: file.name, base64: toBase64(await file.arrayBuffer()) }, consent: $('consent').checked };
 }
 async function extract() {
   let extracted = false;
   busy = true; stop = false; controls();
-  message(/\.pdf$/i.test($('file').files[0]?.name || '') ? 'Importing references… The PDF extraction service can take up to a minute to start.' : 'Importing references…');
+  message('Importing references… The PDF extraction service can take up to a minute to start.');
   try {
     const payload = await upload();
     const data = await request('extract', payload);
     reset();
-    manuscript = payload.file ? { file: payload.file } : { text: payload.text };
-    sourceName = data.filename === 'Pasted manuscript' ? 'Pasted text' : data.filename;
+    manuscript = { file: payload.file };
+    sourceName = data.filename;
     rows = data.references.map(r => ({ ...r, candidates: [], choice: 0, selected: false, lookedUp: false, saved: false }));
-    $('name').value = `${data.filename === 'Pasted manuscript' ? 'Manuscript' : data.filename.replace(/\.[^.]+$/, '')} references`.slice(0, 200);
+    $('name').value = `${data.filename.replace(/\.[^.]+$/, '')} references`.slice(0, 200);
     $('warnings').textContent = ['Extraction may miss or misread references. Correct entries and add omissions before lookup.', ...(data.warnings || [])].join(' ');
     render(); extracted = true;
   } catch (error) { message(error.message, true); }
@@ -335,7 +340,7 @@ $('refresh').addEventListener('click', async () => { busy = true; controls(); tr
 $('consent').addEventListener('change', controls);
 $('file').addEventListener('change', () => {
   const file = $('file').files[0];
-  $('text').value = ''; reset();
+  reset();
   $('file-name').textContent = file ? file.name : 'PDF, Word or text · up to 3 MB · include the bibliography';
   if (file) message('File selected. Confirm it is a public/test manuscript, then import.');
 });
@@ -349,7 +354,6 @@ $('drop').addEventListener('drop', event => {
   $('file').dispatchEvent(new Event('change'));
 });
 $('change').addEventListener('click', () => { showSetup = true; controls(); });
-$('text').addEventListener('input', () => { $('file').value = ''; reset(); });
 $('lookup-all').addEventListener('click', () => runLookup(rows.filter(r => !r.saved && !r.lookedUp)));
 $('stop').addEventListener('click', () => { stop = true; message('Will stop after the current request completes.'); });
 $('save').addEventListener('click', save);
@@ -364,11 +368,6 @@ $('check').addEventListener('click', () => {
     }),
   });
   location.hash = 'audit';
-});
-$('example').addEventListener('click', () => {
-  reset(); $('file').value = ''; $('paste').open = true;
-  $('text').value = 'Public sample bibliography\n\nReferences\nWatson, J. D., and Crick, F. H. C. (1953). Molecular Structure of Nucleic Acids: A Structure for Deoxyribose Nucleic Acid. Nature, 171, 737–738. https://doi.org/10.1038/171737a0\n\nShannon, C. E. (1948). A Mathematical Theory of Communication. Bell System Technical Journal, 27(3), 379–423. https://doi.org/10.1002/j.1538-7305.1948.tb01338.x';
-  message('Sample loaded. Confirm processing consent, then extract references.');
 });
 $('add').addEventListener('click', () => {
   rows.push({ id: crypto.randomUUID(), bibliography: '', doi: '', candidates: [], choice: 0, selected: false, open: true });

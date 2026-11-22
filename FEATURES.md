@@ -11,7 +11,7 @@ Groundwork is already doing several useful pieces of paper-reading infrastructur
 - citation/reference neighborhood expansion
 - ranked or exploratory candidate selection
 - lightweight curation via review cart
-- structured literature synthesis from a curated cart
+- saving a curated cart to a Zotero collection
 - export into formats useful for downstream reading workflows
 
 An agent framework does not need to reuse the UI to benefit from these pieces. The cleaner reuse path is:
@@ -262,37 +262,31 @@ Agent framing:
 
 - use this as `select_for_review(paper_id)`
 
-### 10. Structured Review Draft Generation
+### 10. Save the Review Cart to Zotero
 
 What it does:
 
-- turns the current review cart into a structured literature synthesis grounded only in the selected papers
-
-Current behavior:
-
-- generation is manual
-- requires `2..10` papers in the cart
-- each selected paper is labeled `R1..Rn`
-- each returned claim cites one or more of those `R#` labels
-- HTML ingestion is best-effort and falls back to abstract-only coverage when needed
+- saves the papers in the review cart to a named Zotero collection, as a reading list
 
 Why it matters for agents:
 
-- this is the first end-to-end synthesis primitive in the repo
-- it turns a curated reading set into a review artifact with explicit provenance
-- it separates discovery from synthesis while keeping citations auditable
+- it moves a curated reading set into the user's reference manager, where PDFs and notes live
+- the server resolves each paper itself (by Semantic Scholar ID), so saved metadata is canonical, not client-supplied
 
 Implementation:
 
-- shared review service: [`lib/review/reviewService.js`](/Users/amahajan/src/lit-graph/lib/review/reviewService.js)
-- evidence extraction: [`lib/review/reviewEvidence.js`](/Users/amahajan/src/lit-graph/lib/review/reviewEvidence.js)
-- model client: [`lib/review/anthropicClient.js`](/Users/amahajan/src/lit-graph/lib/review/anthropicClient.js)
-- UI wiring: [`frontend/src/review/reviewDraft.js`](/Users/amahajan/src/lit-graph/frontend/src/review/reviewDraft.js)
+- server action: `POST /api/import/work` in [`lib/citation-import/citationImport.js`](lib/citation-import/citationImport.js)
+- UI wiring: [`frontend/src/review/zoteroCart.js`](frontend/src/review/zoteroCart.js)
+
+Current behavior:
+
+- papers with a DOI or arXiv ID use Crossref or DataCite metadata and reuse existing library items with the same DOI
+- papers without one get an item built from Semantic Scholar metadata, marked in Extra so saving again reuses it
+- saving again adds only new papers; rate limits are retried
 
 Agent framing:
 
-- use this as `generate_review(paper_ids) -> structured_synthesis`
-- the returned artifact is suitable for note generation, downstream editing, or reading-plan derivation
+- use this as `save_reading_list(paper_ids, name) -> zotero_collection`
 
 ### 11. BibTeX Export
 

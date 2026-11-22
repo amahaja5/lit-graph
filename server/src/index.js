@@ -1,6 +1,6 @@
 import { handleAudit } from '../../lib/audit/handler.js';
 import { createPaperHandler } from '../../lib/papers/handler.js';
-import { createDefaultS2Client, createDefaultReviewService, getAuditService } from '../../lib/setup.js';
+import { createDefaultS2Client, getAuditService } from '../../lib/setup.js';
 import { createZoteroOAuth } from '../../lib/auth/zoteroOAuth.js';
 import { requestSignal } from '../../lib/http/requestSignal.js';
 import { requireAppAccess } from '../../lib/auth/appAccess.js';
@@ -14,7 +14,6 @@ import { fileURLToPath } from "node:url";
 import { ProxyHttpError } from "../../lib/shared/errors.js";
 import { sendError } from "../../lib/http/errors.js";
 import { createPaperIdResolver } from "../../lib/papers/paperIdResolver.js";
-import { parseReviewGenerateRequestBody } from "../../lib/review/reviewRequest.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,7 +24,6 @@ const DEFAULT_ENV_FILE = path.resolve(__dirname, "../../.env");
 export function createApp({
   s2Client,
   paperIdResolver,
-  reviewService,
   auditService,
   zoteroOAuth,
   citationImport,
@@ -35,7 +33,6 @@ export function createApp({
 } = {}) {
   const client = s2Client || createDefaultS2Client({ logger });
   const resolver = paperIdResolver || createPaperIdResolver({ s2Client: client, logger });
-  const reviews = reviewService || createDefaultReviewService({ s2Client: client, logger });
   const app = express();
   app.use('/api/import', (req, res, next) => {
     try { requireAppAccess(req, { oauth: zoteroOAuth }); next(); } catch (error) { sendError(res, error); }
@@ -66,18 +63,6 @@ export function createApp({
 
   app.all("/api/contact", (req, res) => handleContact(req, res));
 
-  app.post("/api/review/generate", async (req, res) => {
-    try {
-      // Review drafts run on the server's Anthropic key, so they need the same sign-in as import and audit.
-      requireAppAccess(req, { oauth: zoteroOAuth });
-      const request = parseReviewGenerateRequestBody(req.body);
-      const payload = await reviews.generateReview(request, { signal: requestSignal(req, res) });
-      res.json(payload);
-    } catch (error) {
-      logInternalServerError(logger, req, error);
-      sendError(res, error);
-    }
-  });
 
   if (serveFrontend) {
     app.use(express.static(frontendDir));

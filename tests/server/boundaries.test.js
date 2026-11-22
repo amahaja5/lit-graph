@@ -73,11 +73,7 @@ test('Express and Vercel return the same boundary errors', async t => {
   assert.equal(audit.statusCode, 400);
 });
 
-test('audit model boundary rejects malformed records and preserves inventory limits', async () => {
-  const { validateInventory, validateAssessment } = await import('../../lib/audit/assessment.js');
-  const manuscript = { text: 'A sufficiently long claim.' };
-  assert.throws(() => validateInventory({ references: [null], claims: [] }, manuscript), error => error.code === 'audit_invalid_response');
-  assert.throws(() => validateInventory({ references: [], claims: [null] }, manuscript), error => error.code === 'audit_invalid_response');
-  assert.throws(() => validateInventory({ references: Array(81).fill({}), claims: [] }, manuscript), error => error.status === 400);
+test('audit assessment boundary rejects malformed records', async () => {
+  const { validateAssessment } = await import('../../lib/audit/assessment.js');
   assert.throws(() => validateAssessment({ assessments: [null] }, {}, []), error => error.code === 'audit_invalid_response');
 });

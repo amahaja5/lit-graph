@@ -3,7 +3,6 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import { SYSTEM, digest, validateDataset, validatePrediction, baseline, score, aggregate } from './core.mjs';
-import { createAuditModel } from '../../lib/models/auditModel.js';
 import { readManuscript } from '../../lib/documents/auditDocument.js';
 export function args(argv) {
   const result = {};
@@ -40,8 +39,7 @@ export async function run(options) {
   const datasetPath = path.resolve(options.dataset || 'experiments/citation-import/data/smoke.json');
   const data = validateDataset(JSON.parse(await readFile(datasetPath, 'utf8')));
   const config = JSON.parse(await readFile(options.config || 'experiments/citation-import/configs/baseline.json', 'utf8'));
-  if (!['baseline','command','anthropic'].includes(config.adapter) || !['local','cloud'].includes(config.location) || !config.name) throw Error('Invalid adapter config.');
-  if (config.adapter === 'anthropic' && config.location !== 'cloud') throw Error('Anthropic must be declared cloud.');
+  if (!['baseline','command'].includes(config.adapter) || !['local','cloud'].includes(config.location) || !config.name) throw Error('Invalid adapter config.');
   if (config.adapter === 'command' && (!Array.isArray(config.command) || !config.command.length || config.command.some(s => typeof s !== 'string'))) throw Error('command must be an argv array.');
   if (config.location === 'cloud' && !options['allow-cloud']) throw Error('Cloud calls require --allow-cloud.');
   const split = options.split || 'test', variant = options.variant || 'clean_text';
@@ -51,8 +49,6 @@ export async function run(options) {
   if (!selected.length) throw Error('No documents selected.');
   if (config.location === 'cloud' && selected.some(d => d.privacy === 'private')) throw Error('Private manuscripts are blocked from cloud runs.');
   if (selected.some(d => !d.inputs[variant])) throw Error(`Missing input variant: ${variant}`);
-  const model = config.adapter === 'anthropic' ? createAuditModel({model: config.model || process.env.ANTHROPIC_MODEL}) : null;
-  if (model && !model.configured) throw Error('Set ANTHROPIC_API_KEY and a model in config or ANTHROPIC_MODEL. No calls made.');
   const stamp = new Date().toISOString().replace(/[:.]/g,'-');
   const out = path.resolve(options.out || `experiments/citation-import/results/${config.name}-${variant}-${stamp}.json`);
   await mkdir(path.dirname(out), {recursive:true});
@@ -79,7 +75,7 @@ export async function run(options) {
       inputHash = digest(text);
       // Explicit allowlist: no gold labels, work IDs, provenance, or split reach a model.
       const request = {system:SYSTEM, text};
-      const result = config.adapter === 'baseline' ? {prediction:baseline(text)} : config.adapter === 'anthropic' ? {prediction:await model.json(SYSTEM,{manuscript:text})} : await command(config,request);
+      const result = config.adapter === 'baseline' ? {prediction:baseline(text)} : await command(config,request);
       prediction = validatePrediction(result.prediction);
       if (result.usage) {
         usage = {};

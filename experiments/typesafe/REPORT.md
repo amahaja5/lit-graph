@@ -1,6 +1,8 @@
 # TypeSafe experiments — 2026-09-19
 
-Recommendation: add a semantic HTML evidence gate first, with extraction fixes so the gate can see short evidence and multiple content regions. Pilot audit passage reranking next. Keep the current Anthropic assessment and deterministic source/quote validation while evaluating TypeSafe verdicts in shadow mode.
+> **Update, November 2026.** Groundwork now checks citations with the TypeSafe relation rubric evaluated here (16/16 below) and extracts citations with GROBID; it no longer uses an LLM for extraction or assessment. Review generation and its HTML evidence gate were removed, along with `production-smoke.mjs`. The HTML experiments remain reproducible: their baseline parser now lives in `htmlBaseline.mjs`.
+
+Recommendation: add a semantic HTML evidence gate first, with extraction fixes so the gate can see short evidence and multiple content regions. Pilot audit passage reranking next. Keep the then-current LLM-based assessment and deterministic source/quote validation while evaluating TypeSafe verdicts in shadow mode.
 
 ## What ran
 
@@ -11,7 +13,7 @@ Recommendation: add a semantic HTML evidence gate first, with extraction fixes s
 - Key loaded from the interactive shell; only synthetic fixtures sent. No credentials are stored in artifacts.
 - Existing production functions supplied the keyword-ranking and HTML baselines. Application behavior was not modified.
 
-Fixtures were authored and labeled before their API calls. They deliberately exercise suspected failure modes. They are neither representative production samples nor independently adjudicated ground truth. The extra HTML cases were authored after the first run, but used its unchanged classification rubric. No claims about scientific factual accuracy or comparative Anthropic performance follow from these results.
+Fixtures were authored and labeled before their API calls. They deliberately exercise suspected failure modes. They are neither representative production samples nor independently adjudicated ground truth. The extra HTML cases were authored after the first run, but used its unchanged classification rubric. No claims about scientific factual accuracy or comparative performance against the previous LLM-based assessment follow from these results.
 
 ## Results
 
@@ -19,7 +21,7 @@ Fixtures were authored and labeled before their API calls. They deliberately exe
 | --- | --- | --- |
 | Audit retrieval, 8 cases / 81 candidate passages | All labeled evidence retained in top eight for 4/8 cases | All labeled evidence retained for 8/8 cases |
 | HTML usefulness, 16 cases | 7/16 correct; 8 false acceptances, 1 false rejection | 15/16 correct; 0 false acceptances, 1 false rejection |
-| Citation relation, 16 cases | No Anthropic comparison performed | 16/16 matched author labels |
+| Citation relation, 16 cases | No LLM comparison performed | 16/16 matched author labels |
 | Additional HTML stress suite, 12 cases | Document-usefulness boolean correct in 6/12 | Existing-parser gate: 9/12; supplied intact-candidate experiment: 12/12 |
 
 The retrieval score evaluated relevance to assessing a claim, counting supporting and contradicting evidence equally. The top-ranked passage was relevant in all eight TypeSafe cases versus four baseline cases. Macro recall@1 is 93.75%, because the two-sided case contains two relevant passages and a top-one result can retain only one. Macro recall@8 rose from 50% to 100%. Four cases are direct lexical controls; four deliberately disadvantage word overlap.

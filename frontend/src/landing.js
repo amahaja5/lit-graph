@@ -6,7 +6,7 @@ json('/api/zotero/status').then(status => {
   if (!status?.connected) return;
   document.getElementById('open-app').textContent = 'Continue';
   document.getElementById('access-note').textContent = `Signed in as ${status.username || 'your Zotero account'}.`;
-  for (const el of document.querySelectorAll('.request-access, #access-fallback')) el.hidden = true;
+  for (const el of document.querySelectorAll('.request-access')) el.hidden = true;
   signedIn = true;
 });
 
@@ -22,7 +22,4 @@ json('/api/contact').then(contact => {
   ].join('\n');
   const href = `mailto:${contact.email}?subject=${encodeURIComponent('Groundwork access request')}&body=${encodeURIComponent(body)}`;
   for (const link of document.querySelectorAll('.request-access')) { link.href = href; link.hidden = false; }
-  const address = document.querySelector('.request-access-address');
-  address.href = href; address.textContent = contact.email;
-  document.getElementById('access-fallback').hidden = false;
 });
