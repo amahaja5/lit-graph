@@ -246,9 +246,33 @@ async function lookupRow(row) {
       const waitMs = Math.min(Math.max(Number(error.retryAfterSeconds) || 2, 1), 60) * 1000 * (attempt + 1);
       pace.concurrency = 1; pace.spacingMs = Math.min(pace.spacingMs * 2, 5000);
       pace.nextAt = Math.max(pace.nextAt, Date.now() + waitMs);
-      message(`The lookup service is busy; retrying in ${Math.ceil(waitMs / 1000)} s…`);
+      message(`${error.message} Retrying in ${Math.ceil(waitMs / 1000)} s…`);
     }
   }
+}
+// Waits with a visible countdown; returns early if the user presses Stop.
+async function countdown(ms, text) {
+  const end = Date.now() + ms;
+  while (!stop && Date.now() < end) {
+    message(text(Math.ceil((end - Date.now()) / 1000)));
+    await sleep(Math.min(1000, end - Date.now()));
+  }
+}
+// Saves are idempotent (predetermined Zotero keys), so a rate-limited step is simply repeated.
+const MAX_SAVE_RETRIES = 5, SAVE_SPACING_MS = 300;
+async function withRetry(send) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await send(); }
+    catch (error) {
+      if (error.status !== 429 || attempt >= MAX_SAVE_RETRIES || stop) throw error;
+      await countdown(Math.min(Math.max(Number(error.retryAfterSeconds) || 2, 1), 120) * 1000, s => `${error.message} Continuing automatically in ${s} s…`);
+      if (stop) return null;
+    }
+  }
+}
+async function honourBackoff(result) {
+  if (result?.backoffSeconds) await countdown(Math.min(result.backoffSeconds, 120) * 1000, s => `Zotero asked for a pause. Continuing automatically in ${s} s…`);
+  else await sleep(SAVE_SPACING_MS);
 }
 async function runLookup(list, automatic = false) {
   if (busy) return;
@@ -290,15 +314,19 @@ async function save() {
   busy = true; stop = false; controls();
   try {
     message('Saving to Zotero…');
-    collection ||= await request('collection', { importId, name: $('name').value });
-    $('open-collection').href = collection.url; $('open-collection').hidden = false;
+    if (!collection) {
+      const created = await withRetry(() => request('collection', { importId, name: $('name').value }));
+      if (created) { collection = created; await honourBackoff(created); }
+    }
+    if (collection) { $('open-collection').href = collection.url; $('open-collection').hidden = false; }
     let savedCount = 0;
     for (const row of pending) {
-      if (stop) break;
+      if (stop || !collection) break;
       message(`Saving to Zotero… ${savedCount + 1} of ${pending.length}`); progress(savedCount++, pending.length);
-
-      const result = await request('save', { importId, doi: row.candidates[row.choice].doi });
+      const result = await withRetry(() => request('save', { importId, doi: row.candidates[row.choice].doi }));
+      if (!result) break; // Stopped while waiting.
       row.saved = true; row.zotero = result; render();
+      await honourBackoff(result);
     }
     message(stop ? 'Save paused. Saved references remain in Zotero; continue with the remaining selections.' : `Saved ${rows.filter(r => r.saved).length} references to Zotero. ${rows.filter(r => !r.saved).length} need review.`);
   } catch (error) { message(`${error.message} Completed saves are retained. Retry the remaining selections.`, true); }
