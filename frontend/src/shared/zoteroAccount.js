@@ -52,7 +52,7 @@ export async function signInToZotero() {
   } catch (error) { popup.close(); throw error; }
   finally { busy = false; }
   await refreshZotero();
-  if (reason === 'account_not_allowed') throw new Error('This Zotero account is not allowed to use LitGraph.');
+  if (reason === 'account_not_allowed') throw new Error('This Zotero account is not allowed to use Groundwork.');
   if (reason) throw new Error('Zotero sign-in was not completed.');
   return Boolean(status?.connected);
 }

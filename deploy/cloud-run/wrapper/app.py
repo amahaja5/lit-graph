@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse, Response
 GROBID_URL = os.getenv("GROBID_URL", "http://localhost:8070").rstrip("/")
 MAX_BYTES = 50 * 1024 * 1024
 
-# The key is shared with the LitGraph server; fail at startup rather than run unauthenticated.
+# The key is shared with the Groundwork server; fail at startup rather than run unauthenticated.
 API_KEY = os.environ.get("EXTRACTION_API_KEY", "").strip()
 if not API_KEY:
     raise RuntimeError("EXTRACTION_API_KEY must be set")

@@ -96,7 +96,7 @@ export function startServer({ port } = {}) {
   port ??= Number(process.env.PORT) || 3001;
   const app = createApp();
   const server = app.listen(port, () => {
-    console.log(`LitGraph server listening on http://localhost:${port}`);
+    console.log(`Groundwork server listening on http://localhost:${port}`);
   });
   return server;
 }

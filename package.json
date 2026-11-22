@@ -1,9 +1,9 @@
 {
-  "name": "lit-graph",
+  "name": "groundwork",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Interactive literature snowballing explorer (Semantic Scholar Graph API)",
+  "description": "Find the papers, keep the references in Zotero, and check the claims they support.",
   "scripts": {
     "dev": "node server/src/index.js",
     "server": "node server/src/index.js",
