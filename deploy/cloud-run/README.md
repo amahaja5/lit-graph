@@ -1,13 +1,13 @@
 # GROBID on Cloud Run
 
-Scale-to-zero PDF bibliography extraction for LitGraph. One Cloud Run service runs two containers:
+Scale-to-zero PDF bibliography extraction for Groundwork. One Cloud Run service runs two containers:
 
 | Container | Image | Port | Resources | Exposure |
 | --- | --- | --- | --- | --- |
 | `api` (wrapper, ingress) | built from `wrapper/` | 8000 | 1 vCPU, 1 GiB | public, requires `X-API-Key` on `/extract` |
 | `grobid` (sidecar) | `grobid/grobid:0.9.1-crf` | 8070 | 2 vCPU, 8 GiB | none (`localhost` only) |
 
-The service is set to request-based billing, min 0 and max 2 instances, so idle time costs nothing. LitGraph warms the service when a signed-in user loads the app, signs in to Zotero, or opens the Import panel. It does this by calling the wrapper's `/health` route, which returns 503 until GROBID is ready.
+The service is set to request-based billing, min 0 and max 2 instances, so idle time costs nothing. Groundwork warms the service when a signed-in user loads the app, signs in to Zotero, or opens the Import panel. It does this by calling the wrapper's `/health` route, which returns 503 until GROBID is ready.
 
 The wrapper runs at 1 vCPU rather than 0.5 because Cloud Run requires the first-generation environment and concurrency 1 for CPU below 1. With concurrency 1, a warm-up ping and an extraction arriving together would start a second instance.
 

@@ -10,12 +10,12 @@ import { buildIdentifiersText, extractPaperIdentifiers } from "./identifiers.js"
 export function createReviewExporter({ api, store, setStatus, setError, clearError }) {
   const formats = {
     bibtex: {
-      label: 'BibTeX', prefix: 'litgraph-review', extension: 'bib', type: 'application/x-bibtex;charset=utf-8',
+      label: 'BibTeX', prefix: 'groundwork-review', extension: 'bib', type: 'application/x-bibtex;charset=utf-8',
       fetch: id => api.fetchPaperBibtex(id), entry: extractOrBuildBibtexEntry, document: buildBibtexDocument,
       fallback: paper => !paper?.citationStyles?.bibtex,
     },
     identifiers: {
-      label: 'identifier', prefix: 'litgraph-identifiers', extension: 'txt', type: 'text/plain;charset=utf-8',
+      label: 'identifier', prefix: 'groundwork-identifiers', extension: 'txt', type: 'text/plain;charset=utf-8',
       fetch: id => api.fetchPaperIdentifiers(id), entry: extractPaperIdentifiers, document: buildIdentifiersText,
       fallback: paper => !paper,
     },
@@ -56,10 +56,10 @@ function downloadText(text, fileName, contentType = "text/plain;charset=utf-8") 
 }
 
 function safeFileFragment(value) {
-  return String(value || "litgraph")
+  return String(value || "groundwork")
     .replace(/[^a-zA-Z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 48) || "litgraph";
+    .slice(0, 48) || "groundwork";
 }
 
 function buildUniqueExportSuffix() {

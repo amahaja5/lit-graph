@@ -22,7 +22,7 @@ export function extractPaperIdentifiers(paper, fallbackNode = {}) {
 export function buildIdentifiersText(rows, { generatedAt = new Date().toISOString() } = {}) {
   const list = Array.isArray(rows) ? rows : [];
   const lines = [
-    "# LitGraph Identifier Export",
+    "# Groundwork Identifier Export",
     `# generatedAt=${generatedAt}`,
     `# count=${list.length}`,
     "",

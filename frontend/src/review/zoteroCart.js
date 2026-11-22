@@ -87,7 +87,7 @@ export function createZoteroCartSaver({
     const nodes = getNodes();
     if (!els.name.value && nodes.length) {
       const seed = String(getSeedTitle() || '').trim();
-      els.name.value = (seed ? `Reading list · ${seed}` : `LitGraph reading list ${new Date().toISOString().slice(0, 10)}`).slice(0, 200);
+      els.name.value = (seed ? `Reading list · ${seed}` : `Groundwork reading list ${new Date().toISOString().slice(0, 10)}`).slice(0, 200);
     }
     const s = account.status();
     const remaining = unsaved().length;

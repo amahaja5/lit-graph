@@ -1,10 +1,10 @@
-# LitGraph Features
+# Groundwork Features
 
-This document translates the current LitGraph implementation into agent-friendly capabilities. The goal is to make it easy to lift the features in this repo into a larger framework for reading, surveying, triaging, and organizing papers.
+This document translates the current Groundwork implementation into agent-friendly capabilities. The goal is to make it easy to lift the features in this repo into a larger framework for reading, surveying, triaging, and organizing papers.
 
 ## Purpose
 
-LitGraph is already doing several useful pieces of paper-reading infrastructure:
+Groundwork is already doing several useful pieces of paper-reading infrastructure:
 
 - identifier normalization and seed resolution
 - metadata retrieval
@@ -92,7 +92,7 @@ Agent framing:
 
 What it does:
 
-- when a selected paper node lacks a loaded abstract, LitGraph fetches details lazily instead of front-loading every request
+- when a selected paper node lacks a loaded abstract, Groundwork fetches details lazily instead of front-loading every request
 
 Why it matters for agents:
 
@@ -418,7 +418,7 @@ Best for:
 
 Flow:
 
-1. Use LitGraph for discovery and curation.
+1. Use Groundwork for discovery and curation.
 2. Export identifiers text.
 3. Feed the `.txt` rows into another agent that:
    - downloads PDFs

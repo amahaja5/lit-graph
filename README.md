@@ -1,15 +1,17 @@
-# LitGraph
+# Groundwork
 
-Interactive literature snowballing explorer built on the Semantic Scholar Graph API.
+Find the papers. Keep the references. Check the claims.
+
+Explore the literature around a paper, collect references in Zotero, and check that a manuscript's citations support its claims. Built on the Semantic Scholar Graph API, Zotero, GROBID and Anthropic.
 
 ## Overview
 
-LitGraph starts from a single seed paper and lets you inspect its citation neighborhood without immediately flooding the graph.
+Groundwork starts from a single seed paper and lets you inspect its citation neighborhood without immediately flooding the graph.
 
 Current interaction model:
 
 1. Enter a supported paper identifier and load the seed paper.
-2. LitGraph automatically bootstraps the seed into a denser first-hop neighborhood.
+2. Groundwork automatically bootstraps the seed into a denser first-hop neighborhood.
 3. Click a node to select it and fetch richer paper details if needed.
 4. Review the abstract and metadata in the side panel.
 5. Click **Expand Node** to fetch first-page citations and references for that node.
@@ -40,7 +42,7 @@ The graph stays readable by:
 
 ## Supported Seed Inputs
 
-LitGraph is identifier-driven. It does not currently support free-text paper search.
+Groundwork is identifier-driven. It does not currently support free-text paper search.
 
 Accepted inputs:
 
@@ -247,7 +249,7 @@ Identifier rules:
 - each paper is labeled `R1..Rn`
 - every claim in the structured synthesis is required to cite one or more of those `R#` references
 - HTML retrieval is best-effort
-- if readable HTML cannot be extracted, LitGraph falls back to `abstract_only` coverage and surfaces a warning
+- if readable HTML cannot be extracted, Groundwork falls back to `abstract_only` coverage and surfaces a warning
 - the current output sections are:
   - `Corpus Overview`
   - `Themes`
@@ -310,7 +312,7 @@ npm run dev
 
 ## Vercel Deployment
 
-LitGraph can be deployed directly on Vercel using the static frontend plus serverless API routes in `/api`.
+Groundwork can be deployed directly on Vercel using the static frontend plus serverless API routes in `/api`.
 
 ### Required Vercel Environment Variables
 
@@ -404,7 +406,7 @@ for the refactoring findings and boundary contracts.
 
 ## Additional Docs
 
-[`FEATURES.md`](/Users/amahajan/src/lit-graph/FEATURES.md) maps the implemented LitGraph capabilities into agent-friendly features and integration patterns for paper-reading systems.
+[`FEATURES.md`](/Users/amahajan/src/lit-graph/FEATURES.md) maps the implemented Groundwork capabilities into agent-friendly features and integration patterns for paper-reading systems.
 
 ## Optional TypeSafe evidence checks
 

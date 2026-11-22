@@ -53,7 +53,7 @@ test("buildIdentifiersText creates tab-separated output with header", () => {
     title: "My Title",
   }], { generatedAt: "2026-03-03T00:00:00.000Z" });
 
-  assert.match(text, /# LitGraph Identifier Export/);
+  assert.match(text, /# Groundwork Identifier Export/);
   assert.match(text, /semanticScholarUrl\tarxiv\tpmid\tnber\tpaperId\ttitle/);
   assert.match(text, /https:\/\/www\.semanticscholar\.org\/paper\/xyz\t2501\.11111\t19872477\tNBER:w99999\txyz\tMy Title/);
 });

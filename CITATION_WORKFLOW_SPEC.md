@@ -1,4 +1,4 @@
-# Justified citations: a collaborative workflow for LitGraph
+# Justified citations: a collaborative workflow for Groundwork
 
 Status: design proposal, September 26, 2026. No application behavior is changed.
 
@@ -53,7 +53,7 @@ Start each project with an explicit list of source systems. Each entry declares 
 | Source content | Exact PDF, HTML snapshot, dataset release, or code commit | The material actually inspected |
 | Literature discovery | Existing Semantic Scholar graph | Candidate references and reported citation relationships |
 | Researcher identity | Project account; optional ORCID association later | Who performed an action; identity does not establish correctness |
-| Editorial decisions | New project decision history in LitGraph | Proposed reasons, reviews, disputes, and accepted versions |
+| Editorial decisions | New project decision history in Groundwork | Proposed reasons, reviews, disputes, and accepted versions |
 
 Separate a work from its versions and from the files retrieved for those versions. A DOI match does not prove two PDFs are identical. Conflicting metadata remains inspectable; do not silently merge ambiguous records. A provider update does not overwrite a previously reviewed snapshot.
 
