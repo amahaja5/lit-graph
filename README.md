@@ -459,11 +459,11 @@ PDF/DOCX parsing, source retrieval, and model calls run on the server. No manusc
 
 ### Zotero OAuth setup
 
-Register a browser application at [Zotero OAuth apps](https://www.zotero.org/oauth/apps). For the production domain, set the callback URL to `https://lit-graph.avijmahajan.com/api/zotero/callback`. Set these server environment variables in Vercel's Production environment:
+Register a browser application at [Zotero OAuth apps](https://www.zotero.org/oauth/apps). For the production domain, set the callback URL to `https://groundwork.avijmahajan.com/api/zotero/callback`. Set these server environment variables in Vercel's Production environment:
 
 ```env
 ZOTERO_MODE=oauth
-ZOTERO_OAUTH_ORIGIN=https://lit-graph.avijmahajan.com
+ZOTERO_OAUTH_ORIGIN=https://groundwork.avijmahajan.com
 ZOTERO_CLIENT_KEY=<registered app client key>
 ZOTERO_CLIENT_SECRET=<registered app client secret>
 ZOTERO_SESSION_SECRET=<64-character random hex string>
@@ -506,7 +506,7 @@ starts a new one. Rate limits are retried automatically.
 
 ## Citation import
 
-Open `/#import` or choose **Import references**. This is a separate workflow from manuscript claim checking. It accepts public/test PDF, DOCX, TXT, Markdown, or pasted text, extracts up to 80 references, looks up Crossref metadata, and automatically creates a personal Zotero collection for uniquely matched references; uncertain matches remain available for review.
+Open `/app#import` or choose **Import references**. This is a separate workflow from manuscript claim checking. It accepts public/test PDF, DOCX, TXT, Markdown, or pasted text, extracts up to 80 references, looks up Crossref metadata, and automatically creates a personal Zotero collection for uniquely matched references; uncertain matches remain available for review.
 
 - The tester must confirm the manuscript can be sent to the configured extraction provider. This pilot reuses `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`; it does not use Baseten or local inference.
 - Uploads are capped at 3 MB / 100,000 extracted characters. Scans require OCR first. Extracted reference strings must be locatable in the manuscript.
@@ -545,7 +545,7 @@ The app warms the service (via `GROBID_WARM_PATH`, default `/health`) when a
 signed-in user loads the app, signs in to Zotero, or opens the Import panel, so the
 30–90 s cold start usually finishes before Extract is clicked.
 
-With both values configured, PDF uploads in `/#import` use
+With both values configured, PDF uploads in `/app#import` use
 `POST /extract?mode=references` with multipart field `file` and `X-API-Key`.
 Non-PDF inputs still use Anthropic. Extraction requires the on-screen consent;
 failed GROBID requests are reported without silently sending the PDF to Anthropic.
