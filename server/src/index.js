@@ -4,6 +4,7 @@ import { createDefaultS2Client, createDefaultReviewService, getAuditService } fr
 import { createZoteroOAuth } from '../../lib/auth/zoteroOAuth.js';
 import { requestSignal } from '../../lib/http/requestSignal.js';
 import { requireAppAccess } from '../../lib/auth/appAccess.js';
+import { handleContact } from '../../lib/contact.js';
 import { handleCitationImport } from '../../lib/citation-import/citationImportHandler.js';
 import express from "express";
 import fs from "node:fs";
@@ -62,6 +63,8 @@ export function createApp({
     const route = `/api/paper/:paperId(*)${kind === 'paper' ? '' : `/${kind}`}`;
     app.all(route, (req, res) => handler(req, res, req.params.paperId, req.query));
   }
+
+  app.all("/api/contact", (req, res) => handleContact(req, res));
 
   app.post("/api/review/generate", async (req, res) => {
     try {
