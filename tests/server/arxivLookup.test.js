@@ -93,3 +93,25 @@ test('GROBID arXiv references keep their ID as a DataCite DOI and become preprin
   const both = '<TEI><listBibl><biblStruct><analytic><title level="a">Paper</title><idno type="DOI">10.1000/journal.1</idno><idno type="arXiv">arXiv:2001.00001</idno></analytic><monogr><title level="j">J</title></monogr></biblStruct></listBibl></TEI>';
   assert.equal(parseGrobidReferences(both).references[0].doi, '10.1000/journal.1');
 });
+
+test('rate-limit errors name the provider, and Zotero Backoff reaches the browser with each save', async () => {
+  const session = { apiKey: 'k', userId: '123' };
+  const importId = '12345678-1234-1234-1234-123456789012';
+  const crossref = createCitationImport({ grobid: { configured: false }, env: {}, fetchImpl: async () => new Response('', { status: 429 }) });
+  await assert.rejects(crossref.lookup({ bibliography: 'Shannon. A mathematical theory of communication. 1948.' }), /Crossref is limiting requests/);
+  const limited = createCitationImport({ session, grobid: { configured: false }, env: {}, fetchImpl: async () => new Response('', { status: 429, headers: { 'Retry-After': '30' } }) });
+  await assert.rejects(limited.save({ importId, doi: '10.1038/171737a0' }), e => /Zotero is limiting requests/.test(e.message) && e.retryAfterSeconds === 30);
+
+  const work = { DOI: '10.1038/171737a0', type: 'journal-article', title: ['Molecular Structure'], author: [], issued: { 'date-parts': [[1953]] } };
+  const service = createCitationImport({ session, grobid: { configured: false }, env: {}, fetchImpl: async (url, options = {}) => {
+    const u = new URL(url);
+    if (u.host === 'api.crossref.org') return Response.json({ message: work }, { headers: { Backoff: '99' } }); // Not Zotero's header: ignored.
+    if (options.method === 'POST') return Response.json({ successful: { 0: {} } }, { headers: { Backoff: '5' } });
+    if (u.pathname.includes('/collections/')) return Response.json({ data: { name: 'x' } });
+    if (u.pathname.endsWith('/items')) return Response.json([]);
+    return new Response('', { status: 404 });
+  } });
+  const saved = await service.save({ importId, doi: '10.1038/171737a0' });
+  assert.equal(saved.reused, false);
+  assert.ok(saved.backoffSeconds >= 4 && saved.backoffSeconds <= 5, `backoff ${saved.backoffSeconds}`);
+});
