@@ -35,7 +35,7 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
   try {
     await import('../../frontend/src/citation-import/citationImport.js');
     get('import-consent').checked=true;
-    get('import-text').value='A public bibliography';
+    get('import-file').files=[new File(['%PDF-1.4 test manuscript'],'paper.pdf',{type:'application/pdf'})];
     await get('import-refresh').listeners.click();
     await get('import-extract').listeners.click();
     assert.equal(calls.filter(c=>c.url==='/api/import/warm').length,1,'signed-in load and panel refresh warm GROBID once');
@@ -47,7 +47,7 @@ test('one import action extracts, looks up and saves clear matches; uncertain re
     const { takeAuditHandoff } = await import('../../frontend/src/shared/auditHandoff.js');
     const handoff=takeAuditHandoff();
     assert.deepEqual(dispatched,['litgraph-audit-handoff']); assert.equal(location.hash,'audit');
-    assert.deepEqual(handoff.manuscript,{text:'A public bibliography'});
+    assert.equal(handoff.manuscript.file.name,'paper.pdf'); assert.match(atob(handoff.manuscript.file.base64),/^%PDF-1\.4 test manuscript$/);
     assert.equal(handoff.collection.key,'ABCD1234');
     assert.deepEqual(handoff.references,[{bibliography:`Doe (2020). ${title}`,title,sourceTitle:title,doi:'10.1234/one',zoteroKey:'ITEM1234'}]);
   } finally { Object.assign(globalThis,originals); delete globalThis.location; }
@@ -95,7 +95,7 @@ test('lookups run in parallel within reported Crossref limits and recover from a
   globalThis.fetch=async (url,options)=>{
     const body=options.body?JSON.parse(options.body):null;
     if(url==='/api/zotero/status')return Response.json({configured:true,connected:false});
-    if(url==='/api/import/status')return Response.json({grobidConfigured:false,modelConfigured:true});
+    if(url==='/api/import/status')return Response.json({grobidConfigured:true});
     if(url==='/api/import/warm')return Response.json({state:'unconfigured'});
     if(url.endsWith('/extract'))return Response.json({filename:'paper.txt',references:refs});
     if(url.endsWith('/lookup')){
@@ -109,7 +109,7 @@ test('lookups run in parallel within reported Crossref limits and recover from a
   };
   try {
     await import('../../frontend/src/citation-import/citationImport.js?parallel');
-    get('import-consent').checked=true; get('import-text').value='A public bibliography';
+    get('import-consent').checked=true; get('import-file').files=[new File(['%PDF-1.4 test manuscript'],'paper.pdf',{type:'application/pdf'})];
     await get('import-refresh').listeners.click();
     await get('import-extract').listeners.click();
     assert.ok(maxInFlight>=2,`expected parallel lookups, saw ${maxInFlight}`);
@@ -149,7 +149,7 @@ test('a rate-limited Zotero save waits and continues instead of stopping the imp
   globalThis.fetch=async (url,options)=>{
     const body=options.body?JSON.parse(options.body):null;
     if(url==='/api/zotero/status')return Response.json({configured:true,connected:true,writeRequested:true,userId:'123'});
-    if(url==='/api/import/status')return Response.json({grobidConfigured:false,modelConfigured:true});
+    if(url==='/api/import/status')return Response.json({grobidConfigured:true});
     if(url==='/api/import/warm')return Response.json({state:'unconfigured'});
     if(url.endsWith('/extract'))return Response.json({filename:'paper.txt',references:refs});
     if(url.endsWith('/lookup')){const title=body.bibliography.replace(/^Doe \(2020\)\. /,'');return Response.json({match:'candidate',rateLimit:{limit:10,intervalMs:1000,concurrency:3},candidates:[{title,doi:'10.1234/'+title.length+title.slice(-12),authors:'Jane Doe',year:'2020',item:{creators:[{lastName:'Doe'}]}}]});}
@@ -163,7 +163,7 @@ test('a rate-limited Zotero save waits and continues instead of stopping the imp
   };
   try {
     await import('../../frontend/src/citation-import/citationImport.js?save-retry');
-    get('import-consent').checked=true; get('import-text').value='A public bibliography';
+    get('import-consent').checked=true; get('import-file').files=[new File(['%PDF-1.4 test manuscript'],'paper.pdf',{type:'application/pdf'})];
     await get('import-refresh').listeners.click();
     await get('import-extract').listeners.click();
     assert.equal(saves,3,'all three saved after one rate-limited attempt');

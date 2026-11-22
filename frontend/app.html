@@ -59,13 +59,11 @@
         <div class="audit-columns">
           <section class="audit-input panel-card" aria-labelledby="audit-input-title">
             <h3 id="audit-input-title">1. Add your manuscript</h3>
-            <p class="muted">Include the bibliography. Up to 100,000 characters or a 3 MB file.</p>
+            <p class="muted">A PDF with its bibliography, up to 3 MB. Scanned PDFs need OCR first.</p>
             <label for="audit-arxiv">Load an arXiv paper</label>
             <input id="audit-arxiv" type="text" placeholder="https://arxiv.org/abs/2605.06322v2" autocomplete="off" />
-            <label for="audit-file">Or upload PDF, Word, or text</label>
-            <input id="audit-file" type="file" accept=".pdf,.docx,.txt,.md" />
-            <label for="audit-text">Or paste manuscript text</label>
-            <textarea id="audit-text" rows="12" maxlength="100000" placeholder="Paste the manuscript, including in-text citations and references…"></textarea>
+            <label for="audit-file">Or upload the manuscript PDF</label>
+            <input id="audit-file" type="file" accept=".pdf,application/pdf" />
             <p id="audit-handoff" class="muted" hidden></p>
             <label for="audit-collection">Find cited sources in Zotero</label>
             <div class="audit-zotero-connection">
@@ -74,11 +72,11 @@
             </div>
             <select id="audit-collection"><option value="">Search the whole library</option></select>
             <p class="muted">Sources can be outside the manuscript’s own collection. Public arXiv PDFs are a fallback.</p>
-            <div class="audit-actions"><button id="audit-extract" type="button">Extract citations</button><button id="audit-example" class="secondary" type="button">Load example</button></div>
+            <div class="audit-actions"><button id="audit-extract" type="button">Extract citations</button></div>
             <details class="audit-settings"><summary>Connection settings</summary>
               <button id="audit-connect" type="button" class="secondary">Refresh connection</button>
             </details>
-            <p class="muted audit-disclosure">Manuscript text and source excerpts are sent to Anthropic when you run these steps. When semantic evidence ranking is configured (including shadow evaluation), claims and candidate source excerpts are also sent to TypeSafe. Results stay in this browser session unless downloaded.</p>
+            <p class="muted audit-disclosure">The manuscript PDF is sent to GROBID to find its citations and bibliography. Each cited claim and the retrieved source passages are sent to TypeSafe, which judges whether the passages support the claim. Results stay in this browser session unless downloaded.</p>
           </section>
           <section class="audit-guide panel-card">
             <h3>Evidence you can inspect</h3>
@@ -112,19 +110,15 @@
         <section id="import-setup" class="panel-card import-setup" aria-label="Upload your manuscript">
           <label id="import-drop" class="import-drop" for="import-file">
             <strong>Drop your manuscript here</strong> <span>or <span class="import-link">choose a file</span></span>
-            <span id="import-file-name" class="muted">PDF, Word or text · up to 3 MB · include the bibliography</span>
-            <input id="import-file" type="file" accept=".pdf,.docx,.txt,.md" />
+            <span id="import-file-name" class="muted">PDF · up to 3 MB · include the bibliography</span>
+            <input id="import-file" type="file" accept=".pdf,application/pdf" />
           </label>
-          <details id="import-paste" class="import-paste"><summary>Paste text instead</summary>
-            <label for="import-text" class="sr-only">Manuscript or bibliography text</label>
-            <textarea id="import-text" rows="7" maxlength="100000" placeholder="Paste text including the references…"></textarea>
-          </details>
           <div class="import-go">
             <label class="import-consent"><input id="import-consent" type="checkbox" /> This is a public/test manuscript that I can send to the extraction service.</label>
-            <div class="audit-actions"><button id="import-extract" type="button" disabled>Import to Zotero</button><button id="import-example" type="button" class="secondary">Try a sample</button></div>
+            <div class="audit-actions"><button id="import-extract" type="button" disabled>Import to Zotero</button></div>
           </div>
           <details class="import-disclosure"><summary>What gets sent where?</summary>
-            <p class="muted">PDFs go to GROBID; other inputs go to Anthropic for extraction. Reference strings or DOIs are looked up on Crossref, and arXiv references on DataCite. Clear matches are saved to a new collection in your personal Zotero library; your manuscript is not uploaded to Zotero. Up to 80 references; scanned PDFs need OCR first. Nothing is stored by this app, and unfinished work is lost on refresh.</p>
+            <p class="muted">The PDF goes to GROBID, which extracts its bibliography. Reference strings or DOIs are looked up on Crossref, and arXiv references on DataCite. Clear matches are saved to a new collection in your personal Zotero library; your manuscript is not uploaded to Zotero. Up to 80 references; scanned PDFs need OCR first. Nothing is stored by this app, and unfinished work is lost on refresh.</p>
           </details>
         </section>
         <div id="import-loaded" class="import-loaded" hidden><span id="import-loaded-name"></span><button id="import-change" type="button" class="secondary">Change manuscript</button></div>
@@ -221,11 +215,10 @@
         <div class="panel-header-row review-section-header">
           <div class="review-section-heading">
             <h2>Review Workspace</h2>
-            <p class="muted">Collect papers, export the cart, and generate a structured literature synthesis grounded only in the selected set.</p>
+            <p class="muted">Collect papers, export them, or save them to a Zotero collection.</p>
           </div>
           <div class="review-section-badges">
             <span id="review-count" class="badge">0</span>
-            <span id="review-draft-badge" class="badge" hidden>Stale</span>
           </div>
         </div>
 
@@ -259,17 +252,9 @@
               <p id="cart-zotero-status" class="muted" role="status"></p>
               <a id="cart-zotero-open" target="_blank" rel="noopener noreferrer" hidden>Open in Zotero</a>
             </div>
-            <div class="review-actions review-generate-actions">
-              <button id="generate-review-btn" type="button" disabled>Generate Review</button>
-            </div>
-            <div id="review-draft-status" class="muted review-draft-status" hidden></div>
-            <div id="review-draft-warnings" class="review-warnings"></div>
-            <p class="muted">Review evidence is sent to Anthropic. When HTML quality checks are configured, candidate HTML text is also sent to TypeSafe, including during shadow evaluation.</p>
           </div>
         </div>
 
-        <div id="review-draft-empty" class="review-empty">Add 2-10 papers to the review cart to generate a review.</div>
-        <div id="review-draft-content" class="review-draft" hidden></div>
       </section>
 
       <footer class="app-footer">

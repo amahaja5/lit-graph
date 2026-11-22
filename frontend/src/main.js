@@ -6,8 +6,6 @@ import {
 import { computeGraphPanelHeight } from "./graph/graphSizing.js";
 import { GraphStore } from "./graph/graphStore.js";
 import { normalizeCitationBatch, normalizeReferenceBatch, toPaperNode } from "./graph/normalize.js";
-import { getReviewGenerationGate } from './review/reviewDraftState.js';
-import { createReviewController } from './review/controller.js';
 import { createReviewExporter } from './review/export.js';
 import { formatErrorMessage } from './shared/errors.js';
 import {
@@ -17,7 +15,6 @@ import {
 } from "./graph/rank.js";
 import { createGraphRenderer } from "./graph/graphRenderer.js";
 import { createHoverTip } from "./shared/hoverTip.js";
-import { createReviewDraft } from "./review/reviewDraft.js";
 import { createSearchBar } from "./graph/searchBar.js";
 import { createSidecar } from "./graph/sidecar.js";
 import { createReviewCart } from "./review/reviewCart.js";
@@ -62,12 +59,6 @@ const elements = {
   exportBibtexBtn: document.querySelector("#export-bibtex-btn"),
   exportIdentifiersBtn: document.querySelector("#export-identifiers-btn"),
   reviewSection: document.querySelector("#review-section"),
-  reviewDraftBadge: document.querySelector("#review-draft-badge"),
-  reviewDraftStatus: document.querySelector("#review-draft-status"),
-  reviewDraftWarnings: document.querySelector("#review-draft-warnings"),
-  reviewDraftEmpty: document.querySelector("#review-draft-empty"),
-  reviewDraftContent: document.querySelector("#review-draft-content"),
-  generateReviewBtn: document.querySelector("#generate-review-btn"),
   copyrightText: document.querySelector("#copyright-text"),
 };
 
@@ -132,25 +123,9 @@ const zoteroCart = createZoteroCartSaver({
 });
 onZoteroChange(() => zoteroCart.render());
 
-const reviewDraft = createReviewDraft({
-  rootEl: elements.reviewSection,
-  buttonEl: elements.generateReviewBtn,
-  badgeEl: elements.reviewDraftBadge,
-  emptyEl: elements.reviewDraftEmpty,
-  contentEl: elements.reviewDraftContent,
-  statusEl: elements.reviewDraftStatus,
-  warningsEl: elements.reviewDraftWarnings,
-  onGenerate: () => reviewController.generate(),
-  onSelectReference: handleReviewReferenceSelect,
-});
-
 let activeSeedRequestId = 0;
 const pendingNodeDetailFetches = new Set();
 const completedNodeDetailFetches = new Set();
-const reviewController = createReviewController({
-  api, getPaperIds: () => store.getReviewCartNodes().map(node => node.paperId),
-  onChange: renderApp, setStatus, setError, clearError,
-});
 const exportReview = createReviewExporter({ api, store, setStatus, setError, clearError });
 let lastNoticeKeys = new Set();
 
@@ -186,7 +161,6 @@ async function loadSeedPaper(rawPaperId) {
     store.setRoot(rootNode);
     pendingNodeDetailFetches.clear();
     completedNodeDetailFetches.clear();
-    reviewController.reset();
     renderApp();
     setStatus("Loaded seed paper. Building the first-hop citation neighborhood...");
     await expandNode(rootNode.paperId, {
@@ -355,13 +329,11 @@ function toggleReviewSelection(nodeId) {
   if (node) {
     setStatus(selected ? `Added to review cart: ${node.title}` : `Removed from review cart: ${node.title}`);
   }
-  reviewController.cartChanged();
   clearError();
   renderApp();
 }
 
 function renderApp() {
-  const reviewDraftState = reviewController.getState();
   const snapshot = store.snapshot();
   const selectedNode = snapshot.selectedNodeId ? store.getNode(snapshot.selectedNodeId) : null;
   const reviewNodes = store.getReviewCartNodes();
@@ -381,11 +353,6 @@ function renderApp() {
 
   reviewCart.render(reviewNodes);
   zoteroCart.render();
-  reviewDraft.render({
-    state: reviewDraftState,
-    gate: getReviewGenerationGate(reviewNodes.length),
-    referencesById: buildReviewReferenceIndex(reviewDraftState.payload?.references),
-  });
   renderNotices(snapshot.notices);
 }
 
@@ -528,32 +495,9 @@ function clearError() {
   hoverTip.clear({ tone: "error" });
 }
 
-function handleReviewReferenceSelect(refId, paperId = null) {
-  const targetPaperId = paperId
-    || reviewController.getState().payload?.references?.find((reference) => reference.refId === refId)?.paperId
-    || null;
-  if (!targetPaperId) return;
-
-  selectNode(targetPaperId);
-  const node = store.getNode(targetPaperId);
-  if (node) {
-    setStatus(`Selected ${refId}: ${node.title}`);
-    hydrateNodeDetailsIfNeeded(targetPaperId);
-  }
-}
-
-function buildReviewReferenceIndex(references) {
-  const index = {};
-  for (const reference of Array.isArray(references) ? references : []) {
-    if (!reference?.refId) continue;
-    index[reference.refId] = reference;
-  }
-  return index;
-}
-
 function inferStatusHideMs(message) {
   const text = String(message || "");
-  if (/^(Loading|Bootstrapping|Expanding|Generating|Preparing)\b/i.test(text)) {
+  if (/^(Loading|Bootstrapping|Expanding|Preparing)\b/i.test(text)) {
     return 0;
   }
   if (/already expanded|already in progress|unavailable|truncated/i.test(text)) {

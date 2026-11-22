@@ -182,7 +182,7 @@ test('audit services use request-specific OAuth credentials rather than legacy e
   assert.deepEqual(calls.map(c => c.headers['Zotero-API-Key']), ['private-1', 'private-2']);
   assert.match(calls[0].url, /users\/1\/collections/);
   assert.match(calls[1].url, /users\/2\/collections/);
-  assert.match(anonymous.zoteroError, /Connect your Zotero/);
+  assert.match(anonymous.zoteroError, /Sign in with Zotero/);
 });
 
 test('Express and Vercel expose the shared OAuth handler without leaking credentials', async (t) => {

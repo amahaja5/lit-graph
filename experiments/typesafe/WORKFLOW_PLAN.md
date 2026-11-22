@@ -1,10 +1,12 @@
 # TypeSafe workflow integration plan
 
+> **Superseded, November 2026.** This plan kept an LLM for review synthesis and audit assessments. Groundwork now uses TypeSafe relation verdicts for citation checking and GROBID for extraction, and review generation was removed. Kept for the design record; see the README's "Citation checking" section for current behaviour.
+
 Implementation status: the server adapter, HTML parser/quality gate, audit reranker, fallback handling, configuration, and diagnostics below are now implemented behind default-off feature modes. A synthetic live smoke check passed and the test suite covers the integration. Real-document calibration and broad rollout remain pending; final verdict replacement remains an evaluation task. The accompanying REPORT.md records the experiments supporting the proposed order.
 
 ## Intended behavior
 
-Review generation should use scholarly evidence rather than accept any long HTML page. Manuscript audits should select evidence that addresses the actual claim, including contrary findings, before asking Anthropic for an assessment. Users retain the existing Generate Review and Check Manuscript actions.
+Review generation should use scholarly evidence rather than accept any long HTML page. Manuscript audits should select evidence that addresses the actual claim, including contrary findings, before asking the LLM for an assessment. Users retain the existing Generate Review and Check Manuscript actions.
 
 ```mermaid
 flowchart TD
@@ -13,13 +15,13 @@ flowchart TD
   C --> D[TypeSafe content judgments]
   D --> E[Copy accepted source blocks]
   D --> F[Abstract fallback with coverage notice]
-  E --> G[Anthropic synthesis]
+  E --> G[LLM synthesis]
   F --> G
   H[Reviewed manuscript inventory] --> I[Resolve exact sources and extract PDFs]
   I --> J[Create page-bound evidence candidates]
   J --> K[TypeSafe relevance scores]
   K --> L[Select excerpts within current limits]
-  L --> M[Anthropic assessment]
+  L --> M[LLM assessment]
   M --> N[Exact quote and page validation]
 ```
 
@@ -61,11 +63,11 @@ Refactor `selectPassages` in `lib/audit/auditService.js` into candidate generati
 3. Ask the tested four-level relevance Score per claim/candidate, including support, contradiction, and scope limitations. Use the same rubric across batches. Keep raw scores; confidence reflects uncertainty, not scientific correctness.
 4. Sort by relevance, then stable source position. Deduplicate overlapping spans before packing at most eight excerpts / 14,000 characters. Preserve exact page-bound source text. Do not require positive support to retain an excerpt.
 5. If ranking fails, times out, or has no usable scores, use current `selectPassages` and include a selection warning. Do not interpret API failure or low relevance as a contradiction. When candidates were truncated, record the coverage limitation.
-6. Keep Anthropic's existing assessment, suggested revision, and combined-source reasoning. Run `validateAssessment` unchanged in responsibility: exact quote/page anchoring, unavailable-source handling, and conservative combined findings remain mandatory.
+6. Keep the existing LLM assessment, suggested revision, and combined-source reasoning. Run `validateAssessment` unchanged in responsibility: exact quote/page anchoring, unavailable-source handling, and conservative combined findings remain mandatory.
 
 In `createAuditService`, await the ranker for each available source and pass the operation's remaining deadline. Stop/Resume retains its current behavior, with cancellation propagated where supported. Cache rankings by source hash, claim, candidate-generation version, model, and rubric.
 
-Add selection diagnostics to JSON exports through `frontend/src/audit/auditState.js`; preserve existing reports and show only concise fallback/coverage notices in `frontend/src/audit/manuscriptAudit.js`. Add TypeSafe readiness separately to status; missing TypeSafe must not falsely mark Anthropic extraction as unconfigured. Update the data-flow notice to say selected passages/claims may also be sent to TypeSafe when the corresponding mode is active, including shadow mode.
+Add selection diagnostics to JSON exports through `frontend/src/audit/auditState.js`; preserve existing reports and show only concise fallback/coverage notices in `frontend/src/audit/manuscriptAudit.js`. Add TypeSafe readiness separately to status; missing TypeSafe must not falsely mark LLM extraction as unconfigured. Update the data-flow notice to say selected passages/claims may also be sent to TypeSafe when the corresponding mode is active, including shadow mode.
 
 ## 4. Citation verdicts — shadow evaluation only
 

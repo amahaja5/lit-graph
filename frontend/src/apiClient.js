@@ -97,20 +97,6 @@ export function createApiClient({ baseUrl = "" } = {}) {
       ]);
       return { citations, references };
     },
-
-    async generateReview(paperIds, {
-      mode = "html",
-      outputShape = "structured_synthesis",
-    } = {}) {
-      return requestJson(buildUrl(`${baseUrl}/api/review/generate`), {
-        method: "POST",
-        body: {
-          paperIds,
-          mode,
-          outputShape,
-        },
-      });
-    },
   };
   return client;
 }

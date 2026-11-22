@@ -63,8 +63,7 @@
           <a class="button secondary request-access" href="#" hidden>Request access</a>
           <a class="button secondary" href="#how-it-works">See how it works</a>
         </div>
-        <p class="access" id="access-note">Exploring papers is open to everyone. Generating review drafts, importing references and checking citations need a Zotero sign-in from an approved account.</p>
-        <p class="access" id="access-fallback" hidden>To request access, email <a class="request-access-address" href="#"></a> with your Zotero username.</p>
+        <p class="access" id="access-note">Exploring papers is open to everyone. Importing references and checking citations need a Zotero sign-in from an approved account.</p>
       </section>
 
       <section id="how-it-works" class="steps" aria-labelledby="how-title">
@@ -85,7 +84,7 @@
           <li>
             <span class="step-number">3</span>
             <h3>Check citations</h3>
-            <p>Groundwork finds every cited passage in the manuscript and reads the cited PDF from <strong>your Zotero library</strong>. It reports whether the source <strong>supports, partly supports or contradicts</strong> the claim, or doesn't say, with the exact quote and page so you can verify it yourself.</p>
+            <p>Groundwork finds every cited passage in the manuscript and reads the cited PDF from <strong>your Zotero library</strong>. It judges whether the source <strong>supports, partly supports or contradicts</strong> the claim, or doesn't say, and shows the passage and page it based that on, so you can verify it yourself.</p>
           </li>
         </ol>
       </section>
@@ -97,7 +96,7 @@
         </div>
         <div>
           <h2>What gets sent where</h2>
-          <p>Manuscript PDFs go to a GROBID service for reference extraction; text inputs and citation checks go to Anthropic's Claude. Reference strings and DOIs are looked up on Crossref and DataCite. Groundwork doesn't store your manuscript; unfinished work is lost when you close the page.</p>
+          <p>Manuscript PDFs go to Groundwork's GROBID service, which extracts the citations and bibliography. To check a citation, the claim and the retrieved source passages go to TypeSafe, which judges whether the passages support it. Reference strings and DOIs are looked up on Crossref and DataCite. Groundwork doesn't store your manuscript; unfinished work is lost when you close the page.</p>
         </div>
       </section>
 

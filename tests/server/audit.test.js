@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createAuditService } from "../../lib/audit/auditService.js";
-import { validateInventory, validateAssessment } from "../../lib/audit/assessment.js";
+import { validateAssessment } from "../../lib/audit/assessment.js";
 import { selectPassages } from "../../lib/audit/passages.js";
 import {
   createAuditSources,
@@ -11,7 +11,6 @@ import {
   matchReference,
 } from "../../lib/audit/auditSources.js";
 import { readManuscript, extractPdf } from "../../lib/documents/auditDocument.js";
-import { createAuditModel } from "../../lib/models/auditModel.js";
 import { requireAuditAccess } from "../../lib/auth/auditAccess.js";
 import { createApp } from "../../server/src/index.js";
 
@@ -81,37 +80,13 @@ function pdfBytes() {
   pdf += `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   return Buffer.from(pdf);
 }
+const teiFixture = `<TEI xmlns="http://www.tei-c.org/ns/1.0"><text><body><div><p><s>The model achieved 95.3 percent validity <ref type="bibr" target="#b0">[1]</ref>.</s><s>A sentence without any citation at all.</s></p></div></body><back><div><listBibl><biblStruct xml:id="b0"><analytic><title level="a">Small Molecular Grammar</title><author><persName><surname>Jindal</surname></persName></author></analytic><monogr><imprint><date when="2026"/></imprint></monogr><idno type="arXiv">arXiv:2605.06322v2</idno><note type="raw_reference">Jindal and Ju. Small Molecular Grammar. arXiv:2605.06322v2.</note></biblStruct></listBibl></div></back></text></TEI>`;
+const fakeGrobid = { configured: true, fulltext: async () => teiFixture };
+function fakeJudgments(judge = async ({ passages }) => ({ scores: passages.map((p, i) => ({ id: `p${i + 1}`, choice: p.text.includes("95.3") ? "supported" : "insufficient_evidence", confidence: 0.9 })) })) {
+  return { configured: true, model: "jev-test", auditMode: "off", status: { configured: true }, judgeClaim: judge };
+}
+const pdfUpload = () => ({ file: { name: "manuscript.pdf", base64: pdfBytes().toString("base64") } });
 
-test("inventory anchors claims and references to manuscript and rejects missing mappings", () => {
-  assert.equal(
-    validateInventory(inventory, { text: manuscript }).claims.length,
-    1,
-  );
-  assert.throws(() =>
-    validateInventory(
-      {
-        ...inventory,
-        claims: [{ ...claim, text: "This invented passage is absent." }],
-      },
-      { text: manuscript },
-    ),
-  );
-  assert.throws(() =>
-    validateInventory(
-      {
-        ...inventory,
-        references: [{ ...ref, bibliography: "Made up reference" }],
-      },
-      { text: manuscript },
-    ),
-  );
-  assert.throws(() =>
-    validateInventory(
-      { ...inventory, claims: [{ ...claim, referenceIds: ["missing"] }] },
-      { text: manuscript },
-    ),
-  );
-});
 test("assessment rejects hallucinated quotes, wrong pages and unavailable sources", () => {
   assert.equal(
     validateAssessment(proposed, claim, [packet]).combined.status,
@@ -176,42 +151,39 @@ test("passage selection finds relevant pages beyond the beginning without fabric
   assert.equal(result[0].page, 3);
   assert.equal(result[0].text, quote);
 });
-test("service expands citations and assesses their evidence with injected model and source reader", async () => {
-  let calls = 0;
+test("service extracts citations with GROBID and judges them with TypeSafe", async () => {
+  let judged = 0;
   const service = createAuditService({
-    model: {
-      configured: true,
-      model: "test",
-      json: async () => (++calls === 1 ? inventory : proposed),
-    },
+    grobid: fakeGrobid,
+    judgments: fakeJudgments(async args => { judged++; return fakeJudgments().judgeClaim(args); }),
     sources: { resolve: async () => source, collections: async () => [] },
   });
-  const parsed = await service.extract({ text: manuscript });
+  const parsed = await service.extract(pdfUpload());
   assert.equal(parsed.references.length, 1);
-  const checked = await service.check({
-    claim: parsed.claims[0],
-    references: parsed.references,
-  });
+  assert.equal(parsed.references[0].arxiv, "2605.06322");
+  assert.deepEqual(parsed.claims.map(c => c.text), ["The model achieved 95.3 percent validity [1]."]);
+  const checked = await service.check({ claim: parsed.claims[0], references: parsed.references });
   assert.equal(checked.combined.status, "supported");
   assert.equal(checked.assessments[0].evidence[0].sourceSha256, "hash");
-  assert.equal(calls, 2);
+  assert.match(checked.assessments[0].explanation, /Supported by 1 passage/);
+  assert.equal(judged, 1);
 });
-test("service reports missing full text without asking the model to guess", async () => {
+test("service reports missing full text without asking TypeSafe to guess", async () => {
   const service = createAuditService({
-    model: {
-      json: () => {
-        throw Error("Must not run");
-      },
-    },
-    sources: {
-      resolve: async () => ({
-        status: "unavailable",
-        warnings: ["Missing PDF"],
-      }),
-    },
+    grobid: fakeGrobid,
+    judgments: fakeJudgments(() => { throw Error("Must not run"); }),
+    sources: { resolve: async () => ({ status: "unavailable", warnings: ["Missing PDF"] }) },
   });
   const r = await service.check({ claim, references: [ref] });
   assert.equal(r.combined.status, "insufficient_evidence");
+});
+test("extraction needs GROBID and a PDF; checking needs TypeSafe", async () => {
+  const sources = { resolve: async () => source, collections: async () => [] };
+  await assert.rejects(createAuditService({ grobid: { configured: false }, judgments: fakeJudgments(), sources }).extract(pdfUpload()), /GROBID_API_URL/);
+  await assert.rejects(createAuditService({ grobid: fakeGrobid, judgments: fakeJudgments(), sources }).extract({ text: manuscript }), /PDF/);
+  await assert.rejects(createAuditService({ grobid: fakeGrobid, judgments: { ...fakeJudgments(), configured: false }, sources }).check({ claim, references: [ref] }), /TYPESAFE_API_KEY/);
+  const status = await createAuditService({ grobid: fakeGrobid, judgments: fakeJudgments(), sources }).status();
+  assert.equal(status.modelConfigured, true); assert.equal(status.model, "TypeSafe jev-test");
 });
 test("document parsing handles PDF bytes and enforces manuscript limits", async () => {
   const pdf = await extractPdf(pdfBytes());
@@ -221,13 +193,11 @@ test("document parsing handles PDF bytes and enforces manuscript limits", async 
     file: { name: "paper.pdf", base64: pdfBytes().toString("base64") },
   });
   assert.match(extracted.text, /arXiv/);
+  assert.equal(extracted.pdfBase64, pdfBytes().toString("base64"), "the PDF is passed on to GROBID");
+  await assert.rejects(() => readManuscript({ text: "a".repeat(500) }), /Upload the manuscript as a PDF/);
   await assert.rejects(
-    () => readManuscript({ text: "a".repeat(100001) }),
-    /exceeds/,
-  );
-  await assert.rejects(
-    () => readManuscript({ file: { name: "file.exe", base64: "YWJj" } }),
-    /Supported files/,
+    () => readManuscript({ file: { name: "paper.docx", base64: Buffer.from("PK zip archive, not a pdf").toString("base64") } }),
+    /Word and text files are not supported/,
   );
 });
 test("arXiv URL forms and source identity use exact identifiers/title, not loose matches", () => {
@@ -297,16 +267,6 @@ test("public retrieval refuses a PDF whose version differs from cited version", 
   assert.equal(result.status, "unavailable");
   assert.match(result.warnings.join(" "), /version/);
 });
-test("model adapter fails clearly without credentials and rejects truncated output", async () => {
-  const absent = createAuditModel({ apiKey: "", model: "" });
-  await assert.rejects(() => absent.json("test", {}), /Set ANTHROPIC/);
-  const truncated = createAuditModel({
-    apiKey: "test",
-    model: "test",
-    fetchImpl: async () => Response.json({ stop_reason: "max_tokens" }),
-  });
-  await assert.rejects(() => truncated.json("test", {}), /limit/);
-});
 test("local library access rejects remote peers, DNS rebinding hosts and foreign origins", () => {
   const req = {
     socket: { remoteAddress: "127.0.0.1" },
@@ -328,50 +288,25 @@ test("local library access rejects remote peers, DNS rebinding hosts and foreign
 });
 test("HTTP audit routes run extraction and checking, reject cross-origin access", async (t) => {
   const service = createAuditService({
-    model: {
-      configured: true,
-      model: "test",
-      json: async (system) =>
-        system.startsWith("Extract") ? inventory : proposed,
-    },
-    sources: {
-      mode: "local",
-      collections: async () => [],
-      resolve: async () => source,
-    },
+    grobid: fakeGrobid,
+    judgments: fakeJudgments(),
+    sources: { mode: "local", collections: async () => [], resolve: async () => source },
   });
-  const server = createApp({
-    auditService: service,
-    serveFrontend: false,
-  }).listen(0, "127.0.0.1");
+  const server = createApp({ auditService: service, serveFrontend: false }).listen(0, "127.0.0.1");
   await once(server, "listening");
   t.after(() => server.close());
   const base = `http://127.0.0.1:${server.address().port}`;
   const status = await fetch(base + "/api/audit/status");
   assert.equal(status.status, 200);
-  const extract = await fetch(base + "/api/audit/extract", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ text: manuscript }),
-  });
+  const extract = await fetch(base + "/api/audit/extract", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(pdfUpload()) });
   assert.equal(extract.status, 200);
   const parsed = await extract.json();
-  const check = await fetch(base + "/api/audit/check", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      claim: parsed.claims[0],
-      references: parsed.references,
-    }),
-  });
+  const check = await fetch(base + "/api/audit/check", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ claim: parsed.claims[0], references: parsed.references }) });
   assert.equal(check.status, 200);
   assert.equal((await check.json()).combined.status, "supported");
-  const forbidden = await fetch(base + "/api/audit/status", {
-    headers: { origin: "https://attacker.example" },
-  });
+  const forbidden = await fetch(base + "/api/audit/status", { headers: { origin: "https://attacker.example" } });
   assert.equal(forbidden.status, 401);
 });
-
 test("arXiv manuscript input fetches only the fixed public host and obeys size limits", async () => {
   let requested;
   const parsed = await readManuscript(
