@@ -950,3 +950,91 @@ a {
 .review-zotero-row { display:flex; gap:.5rem; }
 .review-zotero-row input { flex:1; min-width:0; padding:.5rem .6rem; border:1px solid var(--line); border-radius:8px; background:var(--paper); font:inherit; }
 .review-zotero p { margin:0; font-size:.88rem; line-height:1.45; }
+
+/* ==========================================================================
+   Zotero-style theme. Palette and metrics taken from zotero.org's stylesheet:
+   brand red #cc2936 (primary actions), link blue #0069e0, text #222 on white,
+   #f6f6f6 panels, #ddd/#e6e6e6 borders, 3-4px corners, system UI font.
+   ========================================================================== */
+:root {
+  --bg: #f6f6f6;
+  --paper: #ffffff;
+  --ink: #222222;
+  --muted: #6c757d;
+  --line: #dddddd;
+  --accent: #cc2936;
+  --accent-2: #0069e0;
+  --link: #0069e0;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-ui);
+}
+html, body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); }
+a { color: var(--link); }
+a:hover { text-decoration: underline; }
+
+/* Header: white bar, wordmark, tab-style navigation */
+.topbar { background: #fff; border-bottom: 1px solid #e6e6e6; box-shadow: none; }
+.topbar h1 { font-family: var(--font-ui); font-weight: 700; letter-spacing: -0.01em; font-size: 1.45rem; }
+.topbar h1::first-letter { color: var(--accent); }
+.tagline { font-size: .88rem; }
+.workspace-nav { gap: .2rem; }
+.workspace-nav button { border-radius: 0; border: 0; border-bottom: 2px solid transparent; padding: .55rem .8rem; color: #444; background: transparent; }
+.workspace-nav button:hover:not(:disabled) { transform: none; filter: none; color: var(--ink); border-bottom-color: #ddd; }
+.workspace-nav button[aria-pressed="true"] { background: transparent; color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+/* Buttons: red primary, white secondary, 4px corners, no lift */
+button { border-radius: 4px; background: var(--accent); border-color: var(--accent); }
+button:hover:not(:disabled) { transform: none; filter: brightness(0.94); }
+button.secondary { background: #fff; color: var(--ink); border-color: #ccc; }
+button.secondary:hover:not(:disabled) { background: #f6f6f6; filter: none; }
+button:disabled, button.secondary:disabled { background: #f0f0f0; color: #999; border-color: #ddd; }
+input[type="text"]:focus, input[type="number"]:focus, button:focus, a:focus,
+.toolbar-select:focus, .audit-workspace input:focus-visible, .audit-workspace textarea:focus-visible, .audit-workspace select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--link) 45%, white); outline-offset: 1px;
+}
+
+/* Panels: white, hairline borders, small corners, almost no shadow */
+.graph-panel, .panel-card, .search-form, .audit-claim, .import-list, .import-bar, .import-loaded, .import-setup,
+.review-draft-item, .review-reference-item, .hover-tip, .import-more-menu {
+  background: #fff; border-color: #e6e6e6; border-radius: 6px; box-shadow: var(--shadow);
+}
+.graph-svg { background: #fff; }
+.audit-input input, .audit-input textarea, .audit-input select, .audit-reference input,
+.import-row-body textarea, .import-row-body input[type="text"], .import-name-field input,
+.review-zotero-row input, .import-paste textarea, .toolbar-select {
+  border-radius: 4px; border-color: #ccc; background: #fff;
+}
+.audit-intro h2, .import-head h2 { font-family: var(--font-ui); font-weight: 600; letter-spacing: -0.01em; }
+.audit-claim blockquote { font-family: var(--font-ui); }
+.audit-eyebrow { color: var(--accent) !important; }
+
+/* Badges, chips and status pills */
+.badge, .audit-badge, .import-state { background: #f0f0f0; color: #444; border-radius: 3px; }
+.import-filters button, .import-more summary, .import-button-link { background: #fff; color: var(--ink); border-color: #ccc; border-radius: 4px; }
+.import-filters button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.import-state.saved, .import-state.ready, .audit-badge.supported { background: #e5f5e9; color: #1f7a35; }
+.import-state.review, .import-state.pending, .audit-badge.partially_supported { background: #fff4d6; color: #7a5a00; }
+.import-state.notfound, .import-state.error, .audit-badge.contradicted { background: #fbe4e6; color: #a3202c; }
+
+/* Lists: Zotero-like item rows with a blue selection tint */
+.import-row { border-top-color: #eee; }
+.import-row > summary:hover { background: #f6f6f6; }
+.import-row[open] > summary { background: #eaf2fd; }
+.import-match { background: #fafafa; border-color: #e6e6e6; border-radius: 4px; }
+.import-match.chosen { border-color: var(--link); box-shadow: inset 3px 0 0 var(--link); }
+.import-drop { border-radius: 6px; border-color: #ccc; background: #fafafa; }
+.import-drop:hover, .import-drop.dragging, .import-drop:focus-within { border-color: var(--link); background: #f2f7fe; }
+.import-link { color: var(--link); }
+.import-bar progress { accent-color: var(--link); }
+.account-name { color: #444; }
+
+/* Zotero theme: remaining warm surfaces */
+.graph-toolbar button { background: #fff; color: var(--ink); border-color: #ccc; }
+.graph-toolbar button[aria-pressed="true"] { background: #fff; color: var(--ink); border-color: #ccc; box-shadow: inset 0 -2px 0 var(--accent); }
+.toolbar-control, .toolbar-hint { background: #fff; border-color: #e6e6e6; border-radius: 4px; }
+.review-cart-block, .review-control-block, .review-draft-section { background: #fafafa; border-color: #e6e6e6; border-radius: 6px; }
+.review-citation { background: #f0f0f0; border-color: #ddd; border-radius: 3px; }
+.review-warning, .hover-tip[data-tone="notice"] { background: #fff8e1; border-color: #f2d98a; color: #6b5414; border-radius: 4px; }
+.audit-revision { background: #f6f6f6; }
+.import-paste summary, .import-disclosure summary, .audit-settings summary { color: var(--link); }
