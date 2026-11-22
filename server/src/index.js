@@ -65,6 +65,8 @@ export function createApp({
 
   app.post("/api/review/generate", async (req, res) => {
     try {
+      // Review drafts run on the server's Anthropic key, so they need the same sign-in as import and audit.
+      requireAppAccess(req, { oauth: zoteroOAuth });
       const request = parseReviewGenerateRequestBody(req.body);
       const payload = await reviews.generateReview(request, { signal: requestSignal(req, res) });
       res.json(payload);
