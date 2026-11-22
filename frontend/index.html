@@ -14,10 +14,16 @@
           <p class="tagline">Interactive literature snowballing explorer (MVP)</p>
         </div>
         <nav class="workspace-nav" aria-label="Workspace">
-          <button type="button" data-workspace="explore" aria-pressed="true">Explore literature</button>
-          <button type="button" data-workspace="audit" aria-pressed="false">Check a manuscript</button>
-          <button type="button" data-workspace="import" aria-pressed="false">Import citations <span class="nav-pilot">Pilot</span></button>
+          <button type="button" data-workspace="explore" aria-pressed="true">Explore papers</button>
+          <button type="button" data-workspace="import" aria-pressed="false">Import references</button>
+          <button type="button" data-workspace="audit" aria-pressed="false">Check citations</button>
         </nav>
+        <div id="account" class="account" aria-label="Zotero account">
+          <span id="account-name" class="account-name" hidden></span>
+          <button id="account-signin" type="button" class="secondary" disabled>Sign in with Zotero</button>
+          <button id="account-signout" type="button" class="secondary" hidden>Sign out</button>
+          <span id="account-error" class="account-error" role="status" hidden></span>
+        </div>
       </header>
 
       <form id="search-form" class="search-form" novalidate>
@@ -58,11 +64,6 @@
             <label for="audit-collection">Find cited sources in Zotero</label>
             <div class="audit-zotero-connection">
               <p id="zotero-connection-status" role="status">Checking Zotero connection…</p>
-              <div class="audit-actions">
-                <button id="zotero-connect" type="button" class="secondary" disabled>Sign in with Zotero</button>
-                <button id="zotero-disconnect" type="button" class="secondary" hidden>Disconnect Zotero</button>
-              </div>
-              <p id="zotero-signin-hint" class="muted">Sign in on Zotero’s website. No API key to copy or share.</p>
               <a id="zotero-manage" href="https://www.zotero.org/settings/keys" target="_blank" rel="noopener noreferrer" hidden>Manage access on Zotero</a>
             </div>
             <select id="audit-collection"><option value="">Search the whole library</option></select>
@@ -94,11 +95,11 @@
 
       <section id="citation-import" class="audit-workspace import-workspace" aria-labelledby="import-title" hidden>
         <div class="import-head">
-          <div><p class="audit-eyebrow">MANUSCRIPT → ZOTERO · TESTING PILOT</p><h2 id="import-title">Give your references a home.</h2></div>
+          <div><p class="audit-eyebrow">MANUSCRIPT → ZOTERO</p><h2 id="import-title">Give your references a home.</h2></div>
           <div class="import-account" aria-label="Zotero account">
             <p id="import-zotero-status">Sign in with an allowed Zotero account to use the app.</p>
             <p id="import-connection-status" class="muted" role="status">Checking server setup…</p>
-            <div class="import-account-actions"><button id="import-zotero-connect" type="button" class="secondary" disabled>Sign in with Zotero</button><button id="import-zotero-disconnect" type="button" class="secondary" hidden>Sign out</button><button id="import-refresh" type="button" class="secondary">Refresh</button></div>
+            <div class="import-account-actions"><button id="import-refresh" type="button" class="secondary">Refresh</button></div>
           </div>
         </div>
 
@@ -243,6 +244,15 @@
               <button id="export-bibtex-btn" type="button" disabled>Export BibTeX</button>
               <button id="export-identifiers-btn" type="button" disabled>Export IDs (.txt)</button>
             </div>
+            <div class="review-zotero" aria-label="Save the cart to Zotero">
+              <label for="cart-zotero-name">Zotero collection</label>
+              <div class="review-zotero-row">
+                <input id="cart-zotero-name" type="text" maxlength="200" placeholder="Reading list name" disabled />
+                <button id="cart-zotero-save" type="button" disabled>Save to Zotero</button>
+              </div>
+              <p id="cart-zotero-status" class="muted" role="status"></p>
+              <a id="cart-zotero-open" target="_blank" rel="noopener noreferrer" hidden>Open in Zotero</a>
+            </div>
             <div class="review-actions review-generate-actions">
               <button id="generate-review-btn" type="button" disabled>Generate Review</button>
             </div>
@@ -261,9 +271,10 @@
       </footer>
     </div>
 
-    <script type="module" src="/src/main.js"></script>
+    <!-- Workspaces load before main.js: its graph imports D3 from a CDN, and module scripts run in order. -->
     <script type="module" src="/src/audit/manuscriptAudit.js"></script>
     <script type="module" src="/src/citation-import/citationImport.js"></script>
     <script type="module" src="/src/workspaces.js"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

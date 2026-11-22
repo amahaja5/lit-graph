@@ -2,6 +2,7 @@ import { automaticMatch } from './importMatching.js';
 import { referencesToRis } from './ris.js';
 import { installGrobidWarmup, warmGrobid } from './grobidWarmup.js';
 import { offerAuditHandoff } from '../shared/auditHandoff.js';
+import { onZoteroChange } from '../shared/zoteroAccount.js';
 const $ = id => document.getElementById(`import-${id}`);
 const element = (tag, value, className = '') => { const el = document.createElement(tag); el.textContent = value; el.className = className; return el; };
 let rows = [], busy = false, stop = false, ready = false, connection = null, loaded = false;
@@ -35,9 +36,6 @@ function controls() {
     if (!el.closest('#import-filters')) el.disabled = busy;
   const c = counts();
   $('extract').disabled = busy || !ready || !$('consent').checked;
-  $('zotero-connect').disabled = busy || !connection?.configured || connection?.connected;
-  $('zotero-connect').hidden = Boolean(connection?.connected);
-  $('zotero-disconnect').hidden = !connection?.connected;
   const collapsed = rows.length > 0 && !showSetup;
   $('setup').hidden = collapsed;
   $('loaded').hidden = !collapsed;
@@ -85,7 +83,7 @@ async function refresh() {
     connection = await request('status', undefined, 'zotero');
     if (connection.appLogin && !connection.connected) {
       $('connection-status').textContent = 'Sign in to unlock extraction and imports.';
-      $('zotero-status').textContent = connection.configured ? 'Use an allowed Zotero account. Your library stays separate from other users.' : 'Zotero sign-in needs server setup.';
+      $('zotero-status').textContent = connection.configured ? 'Sign in with Zotero (top right) using an allowed account. Your library stays separate from other users.' : 'Zotero sign-in needs server setup.';
       controls();
       return;
     }
@@ -99,8 +97,8 @@ async function refresh() {
     }
     if (connection.userId) owner = connection.userId;
     $('zotero-status').textContent = connection.connected
-      ? `Connected as ${connection.username || connection.userId}. ${connection.writeRequested ? 'Ready for automatic import.' : 'This connection was created for reading. Disconnect, then reconnect here to request write access.'}`
-      : connection.configured ? 'Connect to save into your personal Zotero library.' : 'Zotero sign-in needs server setup. You can extract, look up, and download the inventory in the meantime.';
+      ? `Connected as ${connection.username || connection.userId}. ${connection.writeRequested ? 'Ready for automatic import.' : 'This sign-in is read-only. Sign out (top right) and sign in again to allow saving.'}`
+      : connection.configured ? 'Sign in with Zotero (top right) to save into your personal library.' : 'Zotero sign-in needs server setup. You can extract, look up, and download the inventory in the meantime.';
   } catch (error) {
     connection = null;
     $('connection-status').textContent = error.message;
@@ -332,28 +330,6 @@ async function save() {
   } catch (error) { message(`${error.message} Completed saves are retained. Retry the remaining selections.`, true); }
   finally { busy = false; controls(); }
 }
-async function connectZotero() {
-  const popup = window.open('about:blank', 'litgraph-zotero', 'popup,width=640,height=760');
-  if (!popup) { message('Allow popups and try Connect Zotero again.', true); return; }
-  busy = true; controls(); let timer, finished = false;
-  const finish = async () => { if (finished) return; finished = true; clearInterval(timer); window.removeEventListener('message', onMessage); busy = false; await refresh(); if (connection?.connected && connection?.writeRequested && selected().some(r => !r.saved)) await save(); };
-  const onMessage = event => {
-    if (event.origin === location.origin && event.source === popup && event.data?.type === 'litgraph-zotero') {
-      message(event.data.success ? 'Zotero connected.' : event.data.reason === 'account_not_allowed' ? 'This Zotero account is not allowed. Sign in with an approved account.' : 'Zotero connection was not completed.', !event.data.success);
-      finish();
-    }
-  };
-  window.addEventListener('message', onMessage);
-  try {
-    const data = await request('start', { write: true }, 'zotero');
-    const url = new URL(data.authorizeUrl);
-    if (url.origin !== 'https://www.zotero.org' || url.pathname !== '/oauth/authorize') throw new Error('Unexpected authorization address.');
-    popup.location.href = url.href;
-    const started = Date.now();
-    timer = setInterval(() => { if (popup.closed || Date.now() - started > 600000) finish(); }, 1000);
-    message('Complete Zotero sign-in and grant library write access in the popup.');
-  } catch (error) { popup.close(); message(error.message, true); await finish(); }
-}
 $('extract').addEventListener('click', extract);
 $('refresh').addEventListener('click', async () => { busy = true; controls(); try { await refresh(); } finally { busy = false; controls(); } });
 $('consent').addEventListener('change', controls);
@@ -389,13 +365,6 @@ $('check').addEventListener('click', () => {
   });
   location.hash = 'audit';
 });
-$('zotero-connect').addEventListener('click', connectZotero);
-$('zotero-disconnect').addEventListener('click', async () => {
-  busy = true; controls();
-  try { await request('disconnect', {}, 'zotero'); await refresh(); message('Zotero disconnected. Reconnect here to request write access.'); }
-  catch (error) { message(error.message, true); }
-  finally { busy = false; controls(); }
-});
 $('example').addEventListener('click', () => {
   reset(); $('file').value = ''; $('paste').open = true;
   $('text').value = 'Public sample bibliography\n\nReferences\nWatson, J. D., and Crick, F. H. C. (1953). Molecular Structure of Nucleic Acids: A Structure for Deoxyribose Nucleic Acid. Nature, 171, 737–738. https://doi.org/10.1038/171737a0\n\nShannon, C. E. (1948). A Mathematical Theory of Communication. Bell System Technical Journal, 27(3), 379–423. https://doi.org/10.1002/j.1538-7305.1948.tb01338.x';
@@ -417,6 +386,13 @@ function measureTopbar() {
 }
 measureTopbar();
 window.addEventListener('resize', measureTopbar);
+// The header sign-in changed: refresh, and finish saving ready references once signed in.
+onZoteroChange(async () => {
+  if (!loaded || busy) return;
+  const wasConnected = Boolean(connection?.connected);
+  await refresh();
+  if (!wasConnected && connection?.connected && connection.writeRequested && selected().some(r => !r.saved)) await save();
+});
 window.addEventListener('litgraph-workspace', event => {
   if (event.detail === 'import' && !loaded) { loaded = true; refresh(); }
 });

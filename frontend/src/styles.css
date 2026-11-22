@@ -857,7 +857,6 @@ a {
 .audit-source-choice input { margin-top:.25rem; }
 .audit-active .search-form { display:none; }
 
-.nav-pilot { font-size:.65rem; text-transform:uppercase; opacity:.8; margin-left:.3rem; }
 .import-consent { display:flex; align-items:start; gap:.65rem; line-height:1.6; }
 .import-consent input[type="checkbox"] { width:auto; margin-top:.35rem; flex-shrink:0; }
 .import-reference textarea,.import-reference input[type="text"],.import-reference select { display:block; width:100%; margin:.5rem 0 1rem; padding:.7rem; border:1px solid var(--line); border-radius:6px; background:var(--paper); color:var(--ink); font:inherit; }
@@ -939,3 +938,15 @@ a {
   .import-num, .import-row-meta { display:none; }
   .import-row-body { grid-template-columns:1fr; padding-left:.9rem; }
 }
+
+/* Global Zotero account control in the header */
+.account { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+.account-name { font-size:.9rem; font-weight:600; }
+.account button { padding:.45rem .8rem; font-size:.9rem; }
+.account-error { flex-basis:100%; text-align:right; font-size:.82rem; color:var(--danger); }
+/* Save the review cart to a Zotero collection */
+.review-zotero { display:grid; gap:.4rem; margin-top:.9rem; padding-top:.9rem; border-top:1px solid var(--line); }
+.review-zotero label { font-size:.85rem; font-weight:600; }
+.review-zotero-row { display:flex; gap:.5rem; }
+.review-zotero-row input { flex:1; min-width:0; padding:.5rem .6rem; border:1px solid var(--line); border-radius:8px; background:var(--paper); font:inherit; }
+.review-zotero p { margin:0; font-size:.88rem; line-height:1.45; }

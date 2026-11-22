@@ -432,7 +432,7 @@ See [experiment findings](experiments/typesafe/REPORT.md) and the [workflow plan
 
 ## Manuscript citation audit
 
-Choose **Check a manuscript** in the workspace navigation. Load an arXiv URL/identifier, upload a PDF, DOCX, TXT, or Markdown file (up to 3 MB), or paste up to 100,000 characters including the bibliography. The app extracts citation-bearing passages and reference mappings, lets you review/edit source titles, identifiers, passages, and citation mappings (including adding missed entries), and checks the cited claims against retrieved PDFs. A passage can cite up to eight sources. Larger jobs must be divided into sections with their bibliography (80 references / 150 passages per inventory).
+Choose **Check citations** in the workspace navigation. Load an arXiv URL/identifier, upload a PDF, DOCX, TXT, or Markdown file (up to 3 MB), or paste up to 100,000 characters including the bibliography. The app extracts citation-bearing passages and reference mappings, lets you review/edit source titles, identifiers, passages, and citation mappings (including adding missed entries), and checks the cited claims against retrieved PDFs. A passage can cite up to eight sources. Larger jobs must be divided into sections with their bibliography (80 references / 150 passages per inventory).
 
 Each passage receives per-source findings and a combined assessment: supported, partially supported, contradicted, or insufficient evidence. Positive/negative support findings require an exact quoted passage anchored to a retrieved PDF page. The report preserves source SHA-256, retrieval route, version, Zotero keys, and reviewed PDF page indices. These are **AI-assisted support assessments**, not a certification of printed pagination or experimental validity. Retrieval selects relevant excerpts rather than assessing every page; missing evidence stays unverified. Inventory extraction may miss citations and should be reviewed. Source PDFs without readable text need OCR outside this web workflow.
 
@@ -488,9 +488,23 @@ Shared Express/Vercel connection routes:
 
 The callback page removes its query parameters and sends only a success/failure message to its same-origin opener. OAuth responses use `Cache-Control: no-store` and `Referrer-Policy: no-referrer`. If platform request logs include callback URLs, redact their query strings; the app never logs provider response bodies or credential-bearing revocation URLs.
 
-## Citation import pilot
+## Zotero sign-in and saving the review cart
 
-Open `/#import` or choose **Import citations · Pilot**. This is a separate workflow from manuscript claim checking. It accepts public/test PDF, DOCX, TXT, Markdown, or pasted text, extracts up to 80 references, looks up Crossref metadata, and automatically creates a personal Zotero collection for uniquely matched references; uncertain matches remain available for review.
+Sign in once with **Sign in with Zotero** at the top right; every workspace uses that
+session (accounts are still limited by `ZOTERO_ALLOWED_USERS`). Sign-in requests
+personal-library write access, which importing and saving need.
+
+In **Explore papers**, the review cart has a **Save to Zotero** control. It creates a
+named collection (default "Reading list · <seed paper title>") and adds each cart paper
+by its Semantic Scholar ID. Papers with a DOI or arXiv ID use Crossref or DataCite
+metadata and reuse existing library items with the same DOI; papers without one get an
+item built from Semantic Scholar metadata, marked `Semantic Scholar: <id>` in Extra so
+saving again reuses it. Saving again adds only new cart papers; renaming the collection
+starts a new one. Rate limits are retried automatically.
+
+## Citation import
+
+Open `/#import` or choose **Import references**. This is a separate workflow from manuscript claim checking. It accepts public/test PDF, DOCX, TXT, Markdown, or pasted text, extracts up to 80 references, looks up Crossref metadata, and automatically creates a personal Zotero collection for uniquely matched references; uncertain matches remain available for review.
 
 - The tester must confirm the manuscript can be sent to the configured extraction provider. This pilot reuses `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`; it does not use Baseten or local inference.
 - Uploads are capped at 3 MB / 100,000 extracted characters. Scans require OCR first. Extracted reference strings must be locatable in the manuscript.

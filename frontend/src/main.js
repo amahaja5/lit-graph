@@ -21,6 +21,8 @@ import { createReviewDraft } from "./review/reviewDraft.js";
 import { createSearchBar } from "./graph/searchBar.js";
 import { createSidecar } from "./graph/sidecar.js";
 import { createReviewCart } from "./review/reviewCart.js";
+import { createZoteroCartSaver } from "./review/zoteroCart.js";
+import { onZoteroChange, signInToZotero, zoteroStatus } from "./shared/zoteroAccount.js";
 
 const EXPANSION_LIMIT = 100;
 const COPYRIGHT_START_YEAR = 2026;
@@ -116,6 +118,19 @@ const reviewCart = createReviewCart({
   onExportIdentifiers: options => exportReview("identifiers", options),
   onSelectNode: selectNode,
 });
+
+const zoteroCart = createZoteroCartSaver({
+  els: {
+    name: document.querySelector("#cart-zotero-name"),
+    save: document.querySelector("#cart-zotero-save"),
+    status: document.querySelector("#cart-zotero-status"),
+    open: document.querySelector("#cart-zotero-open"),
+  },
+  getNodes: () => store.getReviewCartNodes(),
+  getSeedTitle: () => store.getNode(store.seedPaperId)?.title,
+  account: { status: zoteroStatus, signIn: signInToZotero },
+});
+onZoteroChange(() => zoteroCart.render());
 
 const reviewDraft = createReviewDraft({
   rootEl: elements.reviewSection,
@@ -365,6 +380,7 @@ function renderApp() {
   });
 
   reviewCart.render(reviewNodes);
+  zoteroCart.render();
   reviewDraft.render({
     state: reviewDraftState,
     gate: getReviewGenerationGate(reviewNodes.length),

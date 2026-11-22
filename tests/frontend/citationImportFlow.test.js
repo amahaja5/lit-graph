@@ -67,7 +67,7 @@ test('signed-out users see Zotero sign-in without fetching protected import stat
   try {
     await import('../../frontend/src/citation-import/citationImport.js?signed-out');
     await get('import-refresh').listeners.click();
-    assert.equal(get('import-zotero-connect').disabled,false);
+    assert.match(get('import-zotero-status').textContent,/Sign in with Zotero \(top right\)/);
     assert.equal(get('import-extract').disabled,true);
     assert.ok(calls.length&&calls.every(url=>url==='/api/zotero/status'),'signed-out users never warm GROBID');
     assert.match(get('import-connection-status').textContent,/Sign in/);
