@@ -1,3 +1,5 @@
+import { installAccountControl } from './shared/zoteroAccount.js';
+
 const names = new Set(['explore', 'audit', 'import']);
 function showWorkspace() {
   const name = names.has(location.hash.slice(1)) ? location.hash.slice(1) : 'explore';
@@ -15,3 +17,4 @@ for (const b of document.querySelectorAll('[data-workspace]')) b.addEventListene
 });
 window.addEventListener('hashchange', showWorkspace);
 showWorkspace();
+installAccountControl();

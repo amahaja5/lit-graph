@@ -6,6 +6,7 @@ import {
 } from "./auditState.js";
 import { linkImportedSources } from "./importLink.js";
 import { takeAuditHandoff } from "../shared/auditHandoff.js";
+import { onZoteroChange } from "../shared/zoteroAccount.js";
 
 const $ = (id) => document.getElementById(id);
 const text = (tag, content, className = "") => {
@@ -37,8 +38,6 @@ function message(content, error = false) {
 }
 function updateControls() {
   const locked = busy || zoteroBusy;
-  $("zotero-connect").disabled = busy || zoteroBusy || !zoteroStatus?.configured;
-  $("zotero-disconnect").disabled = busy || zoteroBusy;
   $("audit-extract").disabled = locked || !modelReady;
   $("audit-run").disabled = locked || !modelReady || !inventory?.claims.length;
   const complete =
@@ -152,60 +151,14 @@ function renderZoteroConnection() {
   const identity = s.connected ? `oauth:${s.userId}` : s.mode;
   if (zoteroIdentity !== null && zoteroIdentity !== identity) invalidateResults();
   zoteroIdentity = identity;
-  $("zotero-connect").hidden = s.connected || (s.mode === 'local' && !s.configured);
-  $("zotero-disconnect").hidden = !s.connected;
   $("zotero-manage").hidden = s.mode === 'local' && !s.connected;
-  $("zotero-signin-hint").hidden = s.mode === 'local' && !s.configured;
   $("zotero-connection-status").textContent = s.connected
     ? `Connected as ${s.username || `Zotero user ${s.userId}`}. This browser’s connection expires after 8 hours.`
     : s.mode === 'local'
       ? 'Local mode: keep Zotero Desktop open on this computer. No Zotero API key is needed.'
       : s.configured
-        ? 'Connect your Zotero account to read your personal library and synced PDFs.'
+        ? 'Sign in with Zotero (top right) to read your personal library and synced PDFs.'
         : 'Zotero sign-in has not been enabled on this server. Ask the app administrator to finish setup.';
-}
-async function connectZotero() {
-  if (busy || zoteroBusy) return;
-  const popup = window.open('about:blank', 'litgraph-zotero', 'popup,width=640,height=760');
-  if (!popup) { message('Allow the Zotero sign-in popup, then try Connect Zotero again.', true); return; }
-  zoteroBusy = true;
-  updateControls();
-  let timer;
-  const cleanup = () => { clearInterval(timer); window.removeEventListener('message', onMessage); zoteroBusy = false; updateControls(); };
-  const onMessage = async (event) => {
-    if (event.origin !== window.location.origin || event.source !== popup || event.data?.type !== 'litgraph-zotero') return;
-    cleanup();
-    if (event.data.success) { invalidateResults(); await connect(); }
-    else message('Zotero sign-in was cancelled, expired, or failed. Try Connect Zotero again.', true);
-  };
-  window.addEventListener('message', onMessage);
-  try {
-    const { authorizeUrl } = await request('start', {}, 'zotero');
-    const url = new URL(authorizeUrl);
-    if (url.origin !== 'https://www.zotero.org' || url.pathname !== '/oauth/authorize') throw new Error('Unexpected Zotero sign-in address.');
-    popup.location.href = url.href;
-    message('Complete sign-in in the Zotero window. Your manuscript stays here.');
-    const started = Date.now();
-    timer = setInterval(async () => {
-      if (popup.closed || Date.now() - started > 10 * 60 * 1000) {
-        cleanup();
-        await connect();
-        if (!zoteroStatus?.connected) message('Zotero sign-in was not completed. You can try again.', true);
-      }
-    }, 1000);
-  } catch (e) { cleanup(); popup.close(); message(e.message, true); }
-}
-async function disconnectZotero() {
-  if (busy || zoteroBusy) return;
-  zoteroBusy = true;
-  updateControls();
-  try {
-    await request('disconnect', {}, 'zotero');
-    invalidateResults();
-    await connect();
-    message('Zotero access revoked and this browser disconnected.');
-  } catch (e) { message(e.message, true); }
-  finally { zoteroBusy = false; updateControls(); }
 }
 async function uploadPayload() {
   const file = $("audit-file").files[0];
@@ -539,8 +492,6 @@ $("audit-extract").addEventListener("click", extract);
 $("audit-run").addEventListener("click", run);
 $("audit-stop").addEventListener("click", () => controller?.abort());
 $("audit-connect").addEventListener("click", connect);
-$("zotero-connect").addEventListener("click", connectZotero);
-$("zotero-disconnect").addEventListener("click", disconnectZotero);
 $("audit-download").addEventListener("click", () => download());
 $("audit-download-json").addEventListener("click", () => download(true));
 $("audit-arxiv").addEventListener("input", () => {
@@ -593,6 +544,8 @@ async function acceptHandoff() {
   if (modelReady && handoff === next) await extract();
 }
 window.addEventListener('litgraph-audit-handoff', acceptHandoff);
+// The header sign-in changed: reload this workspace's connection if it has been opened.
+onZoteroChange(() => { if ($("audit-connection").dataset.loaded && !busy) connect(); });
 window.addEventListener('litgraph-workspace', (event) => {
   if (event.detail === 'audit' && !$("audit-connection").dataset.loaded) {
     $("audit-connection").dataset.loaded = 'true';
