@@ -857,7 +857,6 @@ a {
 .audit-source-choice input { margin-top:.25rem; }
 .audit-active .search-form { display:none; }
 
-.nav-pilot { font-size:.65rem; text-transform:uppercase; opacity:.8; margin-left:.3rem; }
 .import-consent { display:flex; align-items:start; gap:.65rem; line-height:1.6; }
 .import-consent input[type="checkbox"] { width:auto; margin-top:.35rem; flex-shrink:0; }
 .import-reference textarea,.import-reference input[type="text"],.import-reference select { display:block; width:100%; margin:.5rem 0 1rem; padding:.7rem; border:1px solid var(--line); border-radius:6px; background:var(--paper); color:var(--ink); font:inherit; }

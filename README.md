@@ -488,9 +488,9 @@ Shared Express/Vercel connection routes:
 
 The callback page removes its query parameters and sends only a success/failure message to its same-origin opener. OAuth responses use `Cache-Control: no-store` and `Referrer-Policy: no-referrer`. If platform request logs include callback URLs, redact their query strings; the app never logs provider response bodies or credential-bearing revocation URLs.
 
-## Citation import pilot
+## Citation import
 
-Open `/#import` or choose **Import citations · Pilot**. This is a separate workflow from manuscript claim checking. It accepts public/test PDF, DOCX, TXT, Markdown, or pasted text, extracts up to 80 references, looks up Crossref metadata, and automatically creates a personal Zotero collection for uniquely matched references; uncertain matches remain available for review.
+Open `/#import` or choose **Import citations**. This is a separate workflow from manuscript claim checking. It accepts public/test PDF, DOCX, TXT, Markdown, or pasted text, extracts up to 80 references, looks up Crossref metadata, and automatically creates a personal Zotero collection for uniquely matched references; uncertain matches remain available for review.
 
 - The tester must confirm the manuscript can be sent to the configured extraction provider. This pilot reuses `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`; it does not use Baseten or local inference.
 - Uploads are capped at 3 MB / 100,000 extracted characters. Scans require OCR first. Extracted reference strings must be locatable in the manuscript.
