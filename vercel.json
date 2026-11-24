@@ -1,6 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "frontend",
+  "functions": {
+    "api/audit/*.js": {
+      "includeFiles": "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"
+    }
+  },
   "rewrites": [
     { "source": "/app", "destination": "/app.html" },
     { "source": "/app/", "destination": "/app.html" }
