@@ -22,6 +22,7 @@ main > section { max-width: 1080px; margin: 0 auto; padding: 4rem 1.5rem; }
 .lede { font-size: 1.18rem; color: #444; max-width: 46rem; margin: 0 auto; }
 .actions { display: flex; justify-content: center; gap: .75rem; flex-wrap: wrap; margin: 2rem 0 1rem; }
 .access { color: var(--muted); font-size: .92rem; }
+.contact-line { color: var(--muted); font-size: .92rem; margin-top: .5rem; }
 h2 { font-size: 1.7rem; letter-spacing: -0.01em; margin: 0 0 1.5rem; }
 .steps { border-top: 1px solid var(--line); }
 .steps ol { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }

@@ -22,6 +22,7 @@ import { createZoteroCartSaver } from "./review/zoteroCart.js";
 import { onZoteroChange, signInToZotero, zoteroStatus } from "./shared/zoteroAccount.js";
 
 const EXPANSION_LIMIT = 100;
+const SIGNED_OUT_DEFAULT_PAPER = "ARXIV:1706.03762";
 const COPYRIGHT_START_YEAR = 2026;
 const $current_year = new Date().getFullYear();
 
@@ -121,7 +122,17 @@ const zoteroCart = createZoteroCartSaver({
   getSeedTitle: () => store.getNode(store.seedPaperId)?.title,
   account: { status: zoteroStatus, signIn: signInToZotero },
 });
-onZoteroChange(() => zoteroCart.render());
+onZoteroChange((status) => {
+  zoteroCart.render();
+  // Give signed-out visitors a useful starting point, while respecting an
+  // explicit paper search or a direct link to another workspace.
+  if (status?.connected === false
+    && (!location.hash || location.hash === "#explore")
+    && !store.seedPaperId
+    && !elements.searchInput.value.trim()) {
+    loadSeedPaper(SIGNED_OUT_DEFAULT_PAPER);
+  }
+});
 
 let activeSeedRequestId = 0;
 const pendingNodeDetailFetches = new Set();

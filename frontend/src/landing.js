@@ -12,7 +12,11 @@ json('/api/zotero/status').then(status => {
 
 // The address comes from the server, so it never appears in this page's HTML.
 json('/api/contact').then(contact => {
-  if (!contact?.email || signedIn) return;
+  if (!contact?.email) return;
+  const contactLink = document.getElementById('contact-email');
+  contactLink.href = `mailto:${contact.email}?subject=${encodeURIComponent('Groundwork question')}`;
+  document.getElementById('contact-line').hidden = false;
+  if (signedIn) return;
   const body = [
     'Hi,', '',
     "I'd like access to Groundwork.", '',
