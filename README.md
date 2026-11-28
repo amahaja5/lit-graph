@@ -308,18 +308,18 @@ Notes:
 `/Users/amahajan/src/lit-graph/vercel.json` is configured so:
 
 - `/api/*` is handled by Vercel functions
-- all non-API routes fall back to `frontend/index.html`
-
-The SPA rewrite intentionally excludes `/api/*`; otherwise API requests can be served HTML instead of JSON.
+- `/` serves the landing page (`frontend/index.html`)
+- `/app` and `/app/` rewrite to `frontend/app.html`
+- unknown paths return `404`
 
 ### Recommended Post-Deploy Checks
 
 1. Open `/api/healthz` and confirm it returns `{"ok":true}`.
 2. Open `/api/paper/ARXIV%3A1706.03762?fields=title` and confirm it returns JSON.
-3. Load the main app, search for a seed paper, and expand at least one node.
+3. Load `/app`, search for a seed paper, and expand at least one node.
 4. Add papers to the review cart and export them or save them to Zotero.
 
-App URL: [http://localhost:3001](http://localhost:3001)
+App URL: [http://localhost:3001/app](http://localhost:3001/app)
 
 ### Test
 
@@ -331,7 +331,8 @@ npm test
 
 ```text
 frontend/
-  index.html
+  index.html                # landing page (/)
+  app.html                  # workspace app (/app)
   src/
     main.js                 # graph composition and interaction
     apiClient.js
